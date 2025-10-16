@@ -1,22 +1,52 @@
 // ======== CONFIG ========
-const BASE_URL = "https://proskai-backend.onrender.com"; // <— set yours
+const BASE_URL = "https://proskai-backend.onrender.com";
 
-// ======== DOM ========
-const signinView = document.getElementById("signinView");
-const profilesView = document.getElementById("profilesView");
-const emailEl = document.getElementById("email");
-const passwordEl = document.getElementById("password");
-const btnSignin = document.getElementById("btnSignin");
-const profileSelect = document.getElementById("profileSelect");
-const btnUseProfile = document.getElementById("btnUseProfile");
-const btnFillOnly = document.getElementById("btnFillOnly");
+// ======== UTIL ========
+const $  = (s, el=document)=>el.querySelector(s);
+const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
+const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+// Tabs ink underline animation
+const tabs = $$('.tab');
+const ink  = $('#tabInk');
+function moveInk() {
+  const active = $('.tab.active');
+  if (!active) return;
+  const idx = tabs.indexOf(active);
+  ink.style.left = `calc(${idx * 33.333}% + 8px)`;
+}
+tabs.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    tabs.forEach(b=>b.classList.remove('active'));
+    $$('.pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $(`#tab-${btn.dataset.tab}`).classList.add('active');
+    moveInk();
+  });
+});
+moveInk();
+
+// Toasts
+const toasts = $('#toasts');
+function toast(msg, kind='ok', timeout=2600){
+  const el = document.createElement('div');
+  el.className = `toast ${kind==='err'?'err':''}`;
+  el.innerHTML = `<div>${escapeHtml(msg)}</div><button class="x">✕</button>`;
+  toasts.appendChild(el);
+  const close=()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),180); };
+  el.querySelector('.x').onclick = close;
+  setTimeout(close, timeout);
+}
+
+// Escape
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 // ======== BG messaging ========
-function bgSend(type, payload) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type, payload }, (resp) => {
-      if (chrome.runtime.lastError) resolve({ ok: false, error: chrome.runtime.lastError.message });
-      else resolve(resp || { ok: true });
+function bgSend(type,payload){
+  return new Promise((resolve)=>{
+    chrome.runtime.sendMessage({type,payload},(resp)=>{
+      if (chrome.runtime.lastError) resolve({ ok:false, error: chrome.runtime.lastError.message });
+      else resolve(resp || { ok:true });
     });
   });
 }
@@ -32,96 +62,212 @@ async function apiSignin(email, password) {
   return res.json();
 }
 
-// ======== UI state ========
-async function refreshState() {
-  const st = await bgSend("GET_STATE");
-  if (!st?.ok) return showSignin();
-
-  const state = st.state || {};
-  if (state.token && state.userId) {
-    // fetch profiles if not cached
-    if (!Array.isArray(state.profilesCache) || !state.profilesCache.length) {
-      const resp = await bgSend("FETCH_PROFILES");
-      if (!resp?.ok) return showSignin();
-      populateProfiles(resp.profiles);
-      showProfiles();
-      return;
-    }
-    populateProfiles(state.profilesCache);
-    showProfiles();
-  } else {
-    showSignin();
-  }
+// ======== LOGGING ========
+const logBox = $('#statusLog');
+$('#clearLog').addEventListener('click', () => logBox.innerHTML = '');
+function logLine(msg,tone=''){
+  const ts = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const div = document.createElement('div');
+  div.textContent = `[${ts}] ${msg}`;
+  if (tone==='warn') div.style.color='#f8c77e';
+  if (tone==='err')  div.style.color='#ff7b7b';
+  logBox.prepend(div);
 }
 
-function populateProfiles(list) {
-  profileSelect.innerHTML = "";
-  (list || []).forEach(p => {
-    const opt = document.createElement("option");
-    opt.value = p._id || p.id;
-    opt.textContent = p.profileName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Profile";
-    opt.dataset.idx = p._id || p.id;
-    profileSelect.appendChild(opt);
+// ======== UI Refs ========
+const envBadge     = $('#envBadge');
+const selectedName = $('#selectedName');
+const profileBadge = $('#profileBadge');
+const rolesList    = $('#rolesList');
+const rolesEmpty   = $('#rolesEmpty');
+const rolesSkel    = $('#rolesSkeleton');
+const searchInput  = $('#searchInput');
+
+// Profile header refs
+const phName   = $('#phName');
+const phEmail  = $('#phEmail');
+const phResume = $('#phResume');
+
+// ======== Render helpers ========
+function renderSelectedName(p){
+  selectedName.textContent = p ? (p.profileName || ([p.firstName,p.lastName].filter(Boolean).join(' ') || '—')) : '—';
+  profileBadge.textContent = p ? 'Selected' : '—';
+  // avatar initials
+  const a = $('.profile-head .avatar');
+  const initials = (p ? (p.firstName?.[0] || '') + (p.lastName?.[0] || '') : 'A') || 'A';
+  a.textContent = initials.toUpperCase();
+  phName.textContent  = p ? (p.profileName || [p.firstName,p.lastName].filter(Boolean).join(' ') || '—') : '—';
+  phEmail.textContent = p?.email || '—';
+  if (p?.resumeUrl) { phResume.href = p.resumeUrl; phResume.style.display='inline-flex'; }
+  else phResume.style.display='none';
+}
+
+function pillList(arr){
+  if (!Array.isArray(arr) || !arr.length) return '—';
+  return arr.map(v=>`<span class="pill">${escapeHtml(String(v))}</span>`).join(' ');
+}
+
+function renderProfileDetails(p){
+  const box = $('#profileDetails');
+  if (!p){ box.innerHTML = '<div class="k">No profile selected</div><div class="v">—</div>'; return; }
+
+  const kv = (k,v)=>`<div class="k">${k}</div><div class="v">${v ?? '—'}</div>`;
+  const name = [p.firstName,p.lastName].filter(Boolean).join(' ') || '—';
+  const address = [p.street,p.city,p.state,p.zipCode,p.country].filter(Boolean).join(', ') || '—';
+  const skills = Array.isArray(p.skills) ? pillList(p.skills) : (p.skills || '—');
+  const langs  = Array.isArray(p.languages) ? pillList(p.languages.map(l=>l.proficiency?`${l.language} (${l.proficiency})`:l.language)) : (p.languages || '—');
+  const exp0 = p.experience?.[0] || {}; const edu0 = p.education?.[0] || {};
+
+  box.innerHTML = [
+    kv('Name', escapeHtml(name)),
+    kv('Email', escapeHtml(p.email || '—')),
+    kv('Phone', escapeHtml(((p.phoneCountryCode||'')+' '+(p.phone||'')).trim())),
+    kv('Address', escapeHtml(address)),
+    kv('Job Type', escapeHtml(p.jobType || '—')),
+    kv('Relocate', String(p.willingToRelocate ?? '—')),
+    kv('Skills', skills),
+    kv('Languages', langs),
+    kv('LinkedIn', p.linkedin ? `<a class="btn ghost sm" href="${escapeHtml(p.linkedin)}" target="_blank">Open</a>` : '—'),
+    kv('GitHub',  p.github ? `<a class="btn ghost sm" href="${escapeHtml(p.github)}" target="_blank">Open</a>` : '—'),
+    kv('Portfolio', p.portfolio ? `<a class="btn ghost sm" href="${escapeHtml(p.portfolio)}" target="_blank">Open</a>` : '—'),
+    '<div class="k">Experience</div><div class="v"></div>',
+    kv('Company', escapeHtml(exp0.company || '—')),
+    kv('Role', escapeHtml(exp0.role || '—')),
+    kv('Type', escapeHtml(exp0.experienceType || '—')),
+    kv('Current', String(exp0.isCurrent ?? '—')),
+    kv('Description', escapeHtml(exp0.description || '—')),
+    '<div class="k">Education</div><div class="v"></div>',
+    kv('School', escapeHtml(edu0.school || '—')),
+    kv('Degree', escapeHtml(edu0.degree || '—')),
+    kv('Field',  escapeHtml(edu0.fieldOfStudy || '—')),
+    kv('Grade',  escapeHtml(edu0.grade || '—')),
+  ].join('');
+}
+
+function renderRoles(list){
+  rolesList.innerHTML = '';
+  const arr = Array.isArray(list) ? list : [];
+  rolesEmpty.hidden = arr.length>0;
+  if (!arr.length) return;
+
+  const tmpl = $('#roleItemTmpl');
+
+  arr.forEach(p=>{
+    const node = tmpl.content.cloneNode(true);
+    const title = node.querySelector('.role-title');
+    const sub   = node.querySelector('.role-sub');
+    const chip  = node.querySelector('[data-jobtype]');
+    const link  = node.querySelector('.resumeLink');
+    const btn   = node.querySelector('.selectBtn');
+    const av    = node.querySelector('.avatar');
+
+    av.textContent = ((p.firstName?.[0]||'R')+(p.lastName?.[0]||'')).toUpperCase();
+    title.textContent = p.profileName || 'Untitled Profile';
+    sub.textContent   = [[p.firstName,p.lastName].filter(Boolean).join(' '), p.email].filter(Boolean).join(' • ');
+    chip.textContent  = p.jobType || '—';
+
+    if (p.resumeUrl) link.href = p.resumeUrl; else link.style.display='none';
+
+    btn.addEventListener('click', async ()=>{
+      const res = await bgSend('SELECT_PROFILE',{ profile:p });
+      if (res?.ok){
+        renderSelectedName(p);
+        renderProfileDetails(p);
+        toast(`Selected “${p.profileName || (p.firstName+' '+p.lastName)}”`);
+      } else {
+        toast(res?.error || 'Failed to select profile', 'err');
+      }
+    });
+
+    rolesList.appendChild(node);
   });
 }
 
-function showSignin() {
-  signinView.style.display = "block";
-  profilesView.style.display = "none";
-}
-function showProfiles() {
-  signinView.style.display = "none";
-  profilesView.style.display = "block";
-}
+// ======== Search filter ========
+$('#searchInput').addEventListener('input', ()=>{
+  const q = searchInput.value.toLowerCase();
+  $$('.role-row', rolesList).forEach(el=>{
+    const t = el.innerText.toLowerCase();
+    el.style.display = t.includes(q) ? '' : 'none';
+  });
+});
 
-// ======== Events ========
-btnSignin.addEventListener("click", async () => {
-  const email = emailEl.value.trim();
-  const password = passwordEl.value.trim();
-  if (!email || !password) return alert("Enter email & password");
-  try {
-    const data = await apiSignin(email, password);
-    // response shape:
-    // {
-    //   message: "Signin successful",
-    //   token: "...",
-    //   user: { id: "<targetUserId>", email, profileIds: [...], name }
-    // }
-    const token = data?.token;
-    const userId = data?.user?.id;
-    if (!token || !userId) throw new Error("Missing token or userId in response");
+// ======== Actions ========
+$('#autofillBtn').addEventListener('click', async ()=>{
+  logLine('Starting auto-fill…');
+  const res = await bgSend('START_FILL');
+  if (res?.ok){ logLine('Fill request sent to all frames.'); toast('Autofill started'); }
+  else { logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err'); toast(res?.error || 'Autofill failed', 'err'); }
+});
 
-    const saved = await bgSend("SIGNIN_SAVE", { token, userId });
-    if (!saved?.ok) throw new Error(saved?.error || "Could not save signin");
+$('#refreshBtn').addEventListener('click', fetchProfiles);
+$('#fetchBtn').addEventListener('click', fetchProfiles);
+$('#fetchBtn2').addEventListener('click', fetchProfiles);
 
-    const resp = await bgSend("FETCH_PROFILES");
-    if (!resp?.ok) throw new Error(resp?.error || "Could not fetch profiles");
+// ======== Sign in sheet ========
+const sheet = $('#signinSheet');
+$('#signinOpenBtn').addEventListener('click', ()=>sheet.classList.remove('hidden'));
+$('#signinCloseBtn').addEventListener('click', ()=>sheet.classList.add('hidden'));
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
 
-    populateProfiles(resp.profiles);
-    showProfiles();
-  } catch (e) {
-    alert("Signin error: " + e.message);
+$('#btnSignin').addEventListener('click', doSignin);
+$('#password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin(); });
+
+async function doSignin(){
+  const email = $('#email').value.trim();
+  const pwd   = $('#password').value.trim();
+  if (!email || !pwd){ toast('Enter email & password','err'); return; }
+  try{
+    const data = await apiSignin(email, pwd);
+    const token = data?.token; const userId = data?.user?.id;
+    if (!token || !userId) throw new Error('Missing token or userId');
+    const saved = await bgSend('SIGNIN_SAVE',{ token, userId });
+    if (!saved?.ok) throw new Error(saved?.error || 'Could not save signin');
+    sheet.classList.add('hidden');
+    toast('Signed in');
+    await fetchProfiles(true);
+    const st = await bgSend('GET_STATE');
+    renderSelectedName(st?.state?.selectedProfile || null);
+    renderProfileDetails(st?.state?.selectedProfile || null);
+  }catch(e){
+    toast('Signin error: '+e.message,'err');
   }
-});
+}
 
-btnUseProfile.addEventListener("click", async () => {
-  const id = profileSelect.value;
-  if (!id) return alert("Pick a profile");
-  // get current profiles cache so we can pass the full object
-  const st = await bgSend("GET_STATE");
-  const list = st?.state?.profilesCache || [];
-  const profile = list.find(p => (p._id || p.id) === id);
-  if (!profile) return alert("Profile not found in cache");
-  const resp = await bgSend("SELECT_PROFILE", { profile });
-  if (!resp?.ok) return alert(resp?.error || "Fill failed");
-  window.close();
-});
+// ======== Data flows ========
+async function fetchProfiles(showBusy=false){
+  if (showBusy){ rolesSkel.hidden = false; rolesList.innerHTML = ''; }
+  envBadge.textContent = 'Loading…';
+  const res = await bgSend('FETCH_PROFILES');
+  rolesSkel.hidden = true;
 
-btnFillOnly.addEventListener("click", async () => {
-  const resp = await bgSend("START_FILL");
-  if (!resp?.ok) return alert(resp?.error || "Fill failed");
-  window.close();
-});
+  if (res?.ok){
+    renderRoles(res.profiles);
+    envBadge.textContent = `Loaded ${res.profiles?.length || 0}`;
+    if (!res.profiles?.length) rolesEmpty.hidden = false;
+    logLine('Profiles refreshed from API.');
+  } else {
+    envBadge.textContent = 'Error';
+    rolesEmpty.hidden = false;
+    toast(res?.error || 'Failed to fetch profiles','err');
+  }
+}
 
 // ======== Init ========
-refreshState();
+(async function init(){
+  const st = await bgSend('GET_STATE');
+  const state = st?.state || {};
+
+  renderSelectedName(state.selectedProfile || null);
+  renderProfileDetails(state.selectedProfile || null);
+
+  if (Array.isArray(state.profilesCache) && state.profilesCache.length){
+    renderRoles(state.profilesCache);
+    envBadge.textContent = `Cached ${state.profilesCache.length}`;
+  } else {
+    rolesEmpty.hidden = false;
+    envBadge.textContent = state.token && state.userId ? 'Signed in' : 'Sign in';
+  }
+
+  logLine('Popup ready.');
+})();

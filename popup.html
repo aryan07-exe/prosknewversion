@@ -1,40 +1,168 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Universal Job Autofill</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 12px; width: 360px; }
-    .row { margin-bottom: 10px; }
-    input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 8px; }
-    button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
-    .muted { color: #6b7280; font-size: 12px; margin-top: 8px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin: 8px 0; }
-    #profilesView { display: none; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Auto Apply</title>
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div id="signinView">
-    <div class="row"><strong>Sign in</strong></div>
-    <div class="row"><input id="email" placeholder="Email" /></div>
-    <div class="row"><input id="password" placeholder="Password" type="password" /></div>
-    <div class="row"><button id="btnSignin">Sign in</button></div>
-    <div class="muted">After sign in, we’ll fetch your demo profiles and let you choose one to fill.</div>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">⚙️</span>
+        <span class="title">Auto Apply</span>
+      </div>
+      <div class="actions">
+        <button id="signinOpenBtn" class="icon-btn" title="Sign in">🔐</button>
+        <button id="refreshBtn" class="icon-btn" title="Refresh from API">⟳</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="apply"><span>Apply</span></button>
+      <button class="tab" data-tab="roles"><span>Roles</span></button>
+      <button class="tab" data-tab="profile"><span>Profile</span></button>
+      <div class="ink" id="tabInk"></div>
+    </nav>
+
+    <main class="panes">
+      <!-- APPLY -->
+      <section class="pane active" id="tab-apply">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="stack">
+              <h2>Quick Actions</h2>
+              <p class="sub">One-click autofill on the active job page.</p>
+            </div>
+            <span id="envBadge" class="badge">—</span>
+          </div>
+
+          <div class="card center">
+            <div class="row between w100">
+              <div class="muted">Selected profile</div>
+              <div id="selectedName" class="accent ellipsis">—</div>
+            </div>
+
+            <button id="autofillBtn" class="btn primary xl w100">
+              <span class="btn-ico">⚡</span>
+              <span>Auto-Fill this page</span>
+            </button>
+
+            <div class="divider"></div>
+            <div class="hstack gap8 muted">
+              <span class="dot online"></span> Engine ready
+            </div>
+          </div>
+
+          <div class="card log-card">
+            <div class="card-head">
+              <div class="hstack gap6">
+                <span>Activity</span>
+                <span class="muted sm">live</span>
+              </div>
+              <button id="clearLog" class="icon-btn sm" title="Clear">✕</button>
+            </div>
+            <div class="log" id="statusLog"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROLES -->
+      <section class="pane" id="tab-roles">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="stack">
+              <h2>Profiles</h2>
+              <p class="sub">Pick a profile/resume to use while applying.</p>
+            </div>
+            <div class="hstack gap8">
+              <input id="searchInput" class="input search" placeholder="Search…" />
+              <button id="fetchBtn" class="btn ghost">Fetch</button>
+            </div>
+          </div>
+
+          <div id="rolesList" class="list"></div>
+          <div class="skeleton-list" id="rolesSkeleton" hidden>
+            <div class="skeleton item"></div>
+            <div class="skeleton item"></div>
+            <div class="skeleton item"></div>
+          </div>
+
+          <div class="empty" id="rolesEmpty" hidden>
+            <p>No profiles yet.</p>
+            <button id="fetchBtn2" class="btn ghost">Fetch from API</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="pane" id="tab-profile">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="stack">
+              <h2>Profile</h2>
+              <p class="sub">Preview the active profile details.</p>
+            </div>
+            <span id="profileBadge" class="badge">—</span>
+          </div>
+
+          <div class="card">
+            <div id="profileHeader" class="profile-head">
+              <div class="avatar">A</div>
+              <div class="stack">
+                <div id="phName" class="title ellipsis">—</div>
+                <div id="phEmail" class="muted ellipsis sm">—</div>
+              </div>
+              <a id="phResume" class="btn ghost sm" target="_blank" rel="noopener">Resume</a>
+            </div>
+
+            <div id="profileDetails" class="kv"></div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <div id="profilesView">
-    <div class="row"><strong>Select a profile</strong></div>
-    <div class="row">
-      <select id="profileSelect"></select>
+  <!-- Toasts -->
+  <div id="toasts" class="toasts"></div>
+
+  <!-- Signin Sheet -->
+  <div id="signinSheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <h3>Sign in</h3>
+        <button id="signinCloseBtn" class="icon-btn">✕</button>
+      </div>
+      <div class="sheet-body">
+        <label class="lbl">Email</label>
+        <input id="email" type="email" class="input wide" placeholder="you@example.com" />
+        <label class="lbl">Password</label>
+        <input id="password" type="password" class="input wide" placeholder="••••••••" />
+        <button id="btnSignin" class="btn primary wide">Continue</button>
+        <p class="sub muted">Your token is stored locally to fetch profiles.</p>
+      </div>
     </div>
-    <div class="row">
-      <button id="btnUseProfile">Use this resume and Fill</button>
-    </div>
-    <div class="row">
-      <button id="btnFillOnly">Fill with currently selected</button>
-    </div>
-    <div class="muted">Open the application form tab before clicking Fill.</div>
   </div>
+
+  <template id="roleItemTmpl">
+    <div class="role-row">
+      <div class="hstack gap10 grow">
+        <div class="avatar sm">R</div>
+        <div class="stack grow">
+          <div class="row between">
+            <div class="role-title ellipsis"></div>
+            <span class="chip" data-jobtype>—</span>
+          </div>
+          <div class="role-sub ellipsis"></div>
+        </div>
+      </div>
+      <div class="hstack gap8 nowrap">
+        <a class="btn ghost sm resumeLink" target="_blank" rel="noopener">Resume</a>
+        <button class="btn primary sm selectBtn">Select</button>
+      </div>
+    </div>
+  </template>
 
   <script src="popup.js"></script>
 </body>
