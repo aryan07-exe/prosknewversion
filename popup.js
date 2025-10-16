@@ -4,12 +4,12 @@ const BASE_URL = "https://proskai-backend.onrender.com";
 // ======== UTIL ========
 const $  = (s, el=document)=>el.querySelector(s);
 const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
-const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-// Tabs ink underline animation
+// Tabs underline animation
 const tabs = $$('.tab');
 const ink  = $('#tabInk');
-function moveInk() {
+function moveInk(){
   const active = $('.tab.active');
   if (!active) return;
   const idx = tabs.indexOf(active);
@@ -28,18 +28,15 @@ moveInk();
 
 // Toasts
 const toasts = $('#toasts');
-function toast(msg, kind='ok', timeout=2600){
+function toast(msg, kind='ok', timeout=2400){
   const el = document.createElement('div');
   el.className = `toast ${kind==='err'?'err':''}`;
   el.innerHTML = `<div>${escapeHtml(msg)}</div><button class="x">✕</button>`;
   toasts.appendChild(el);
-  const close=()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),180); };
+  const close=()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),160); };
   el.querySelector('.x').onclick = close;
   setTimeout(close, timeout);
 }
-
-// Escape
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 // ======== BG messaging ========
 function bgSend(type,payload){
@@ -88,11 +85,39 @@ const phName   = $('#phName');
 const phEmail  = $('#phEmail');
 const phResume = $('#phResume');
 
+// Sign in sheet
+const sheet = $('#signinSheet');
+$('#signinOpenBtn').addEventListener('click', ()=>sheet.classList.remove('hidden'));
+$('#signinCloseBtn').addEventListener('click', ()=>sheet.classList.add('hidden'));
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
+$('#btnSignin').addEventListener('click', doSignin);
+$('#password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin(); });
+
+async function doSignin(){
+  const email = $('#email').value.trim();
+  const pwd   = $('#password').value.trim();
+  if (!email || !pwd){ toast('Enter email & password','err'); return; }
+  try{
+    const data = await apiSignin(email, pwd);
+    const token = data?.token; const userId = data?.user?.id;
+    if (!token || !userId) throw new Error('Missing token or userId');
+    const saved = await bgSend('SIGNIN_SAVE',{ token, userId });
+    if (!saved?.ok) throw new Error(saved?.error || 'Could not save signin');
+    sheet.classList.add('hidden');
+    toast('Signed in');
+    await fetchProfiles(true);
+    const st = await bgSend('GET_STATE');
+    renderSelectedName(st?.state?.selectedProfile || null);
+    renderProfileDetails(st?.state?.selectedProfile || null);
+  }catch(e){
+    toast('Signin error: '+e.message,'err');
+  }
+}
+
 // ======== Render helpers ========
 function renderSelectedName(p){
   selectedName.textContent = p ? (p.profileName || ([p.firstName,p.lastName].filter(Boolean).join(' ') || '—')) : '—';
   profileBadge.textContent = p ? 'Selected' : '—';
-  // avatar initials
   const a = $('.profile-head .avatar');
   const initials = (p ? (p.firstName?.[0] || '') + (p.lastName?.[0] || '') : 'A') || 'A';
   a.textContent = initials.toUpperCase();
@@ -100,6 +125,9 @@ function renderSelectedName(p){
   phEmail.textContent = p?.email || '—';
   if (p?.resumeUrl) { phResume.href = p.resumeUrl; phResume.style.display='inline-flex'; }
   else phResume.style.display='none';
+
+  // highlight selected in Roles list
+  highlightSelectedInList(p?._id || p?.id);
 }
 
 function pillList(arr){
@@ -143,30 +171,40 @@ function renderProfileDetails(p){
     kv('Grade',  escapeHtml(edu0.grade || '—')),
   ].join('');
 }
-
 function renderRoles(list){
   rolesList.innerHTML = '';
   const arr = Array.isArray(list) ? list : [];
-  rolesEmpty.hidden = arr.length>0;
+  rolesEmpty.hidden = arr.length > 0;
   if (!arr.length) return;
 
-  const tmpl = $('#roleItemTmpl');
+  const tmpl = document.getElementById('roleItemTmpl');
 
   arr.forEach(p=>{
-    const node = tmpl.content.cloneNode(true);
+    const node  = tmpl.content.cloneNode(true);
+    const row   = node.querySelector('.role-row');
     const title = node.querySelector('.role-title');
     const sub   = node.querySelector('.role-sub');
     const chip  = node.querySelector('[data-jobtype]');
     const link  = node.querySelector('.resumeLink');
     const btn   = node.querySelector('.selectBtn');
     const av    = node.querySelector('.avatar');
+    const flag  = node.querySelector('.selected-flag');
+
+    const id = p._id || p.id;
+    row.dataset.id = id || '';
 
     av.textContent = ((p.firstName?.[0]||'R')+(p.lastName?.[0]||'')).toUpperCase();
     title.textContent = p.profileName || 'Untitled Profile';
     sub.textContent   = [[p.firstName,p.lastName].filter(Boolean).join(' '), p.email].filter(Boolean).join(' • ');
     chip.textContent  = p.jobType || '—';
 
-    if (p.resumeUrl) link.href = p.resumeUrl; else link.style.display='none';
+    // IMPORTANT: never remove the link node; just hide it if missing
+    if (p.resumeUrl) { link.href = p.resumeUrl; link.hidden = false; }
+    else { link.hidden = true; }
+
+    // Belt-and-suspenders: ensure the Select button renders even if CSS collides
+    btn.style.display = 'inline-flex';
+    btn.style.visibility = 'visible';
 
     btn.addEventListener('click', async ()=>{
       const res = await bgSend('SELECT_PROFILE',{ profile:p });
@@ -174,12 +212,29 @@ function renderRoles(list){
         renderSelectedName(p);
         renderProfileDetails(p);
         toast(`Selected “${p.profileName || (p.firstName+' '+p.lastName)}”`);
+        highlightSelectedInList(id);
       } else {
-        toast(res?.error || 'Failed to select profile', 'err');
+        toast(res?.error || 'Failed to select profile','err');
       }
     });
 
     rolesList.appendChild(node);
+  });
+
+  // paint selected state after render
+  bgSend('GET_STATE').then(st=>{
+    const selected = st?.state?.selectedProfile;
+    highlightSelectedInList(selected?._id || selected?.id);
+  });
+}
+
+// Visually mark the selected row (check + border)
+function highlightSelectedInList(selectedId){
+  $$('.role-row', rolesList).forEach(r=>{
+    const match = (r.dataset.id && selectedId) ? (r.dataset.id === String(selectedId)) : false;
+    r.classList.toggle('selected', !!match);
+    const flag = $('.selected-flag', r);
+    if (flag) flag.hidden = !match;
   });
 }
 
@@ -204,37 +259,6 @@ $('#refreshBtn').addEventListener('click', fetchProfiles);
 $('#fetchBtn').addEventListener('click', fetchProfiles);
 $('#fetchBtn2').addEventListener('click', fetchProfiles);
 
-// ======== Sign in sheet ========
-const sheet = $('#signinSheet');
-$('#signinOpenBtn').addEventListener('click', ()=>sheet.classList.remove('hidden'));
-$('#signinCloseBtn').addEventListener('click', ()=>sheet.classList.add('hidden'));
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
-
-$('#btnSignin').addEventListener('click', doSignin);
-$('#password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin(); });
-
-async function doSignin(){
-  const email = $('#email').value.trim();
-  const pwd   = $('#password').value.trim();
-  if (!email || !pwd){ toast('Enter email & password','err'); return; }
-  try{
-    const data = await apiSignin(email, pwd);
-    const token = data?.token; const userId = data?.user?.id;
-    if (!token || !userId) throw new Error('Missing token or userId');
-    const saved = await bgSend('SIGNIN_SAVE',{ token, userId });
-    if (!saved?.ok) throw new Error(saved?.error || 'Could not save signin');
-    sheet.classList.add('hidden');
-    toast('Signed in');
-    await fetchProfiles(true);
-    const st = await bgSend('GET_STATE');
-    renderSelectedName(st?.state?.selectedProfile || null);
-    renderProfileDetails(st?.state?.selectedProfile || null);
-  }catch(e){
-    toast('Signin error: '+e.message,'err');
-  }
-}
-
-// ======== Data flows ========
 async function fetchProfiles(showBusy=false){
   if (showBusy){ rolesSkel.hidden = false; rolesList.innerHTML = ''; }
   envBadge.textContent = 'Loading…';

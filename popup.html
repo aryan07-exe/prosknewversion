@@ -83,6 +83,7 @@
           </div>
 
           <div id="rolesList" class="list"></div>
+
           <div class="skeleton-list" id="rolesSkeleton" hidden>
             <div class="skeleton item"></div>
             <div class="skeleton item"></div>
@@ -145,24 +146,30 @@
     </div>
   </div>
 
-  <template id="roleItemTmpl">
-    <div class="role-row">
-      <div class="hstack gap10 grow">
-        <div class="avatar sm">R</div>
-        <div class="stack grow">
-          <div class="row between">
-            <div class="role-title ellipsis"></div>
+  <!-- Role Row Template (ALWAYS shows Select button) -->
+<template id="roleItemTmpl">
+  <div class="role-row" data-id="">
+    <div class="hstack gap10 grow">
+      <div class="avatar sm">R</div>
+      <div class="stack grow">
+        <div class="row between">
+          <div class="role-title ellipsis"></div>
+          <div class="hstack gap6 actions-right">
             <span class="chip" data-jobtype>—</span>
+            <span class="selected-flag" hidden>✅ Selected</span>
           </div>
-          <div class="role-sub ellipsis"></div>
         </div>
-      </div>
-      <div class="hstack gap8 nowrap">
-        <a class="btn ghost sm resumeLink" target="_blank" rel="noopener">Resume</a>
-        <button class="btn primary sm selectBtn">Select</button>
+        <div class="role-sub ellipsis"></div>
       </div>
     </div>
-  </template>
+    <!-- Keep a stable actions container so Select never collapses -->
+    <div class="hstack gap8 nowrap role-actions">
+      <a class="btn ghost sm resumeLink" target="_blank" rel="noopener">Resume</a>
+      <button class="btn primary sm selectBtn" type="button">Select</button>
+    </div>
+  </div>
+</template>
+
 
   <script src="popup.js"></script>
 </body>

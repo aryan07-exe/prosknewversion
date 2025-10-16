@@ -73,8 +73,11 @@
   
   .list{display:flex;flex-direction:column;gap:8px}
   .role-row{display:flex;align-items:center;gap:10px;background:var(--elev);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .role-row.selected{border-color:var(--accent)}
   .role-title{font-weight:600}
   .role-sub{color:var(--muted);font-size:12px}
+  .selected-flag{font-size:11px;color:#9fe2c4}
+  
   .chip{font-size:11px;background:#0c1a33;border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:#cfe0ff}
   
   .avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(180deg,#1a2b4d,#0f1a33);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700}
@@ -102,4 +105,14 @@
   .sheet-card{width:320px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow)}
   .sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
   .sheet-body{display:flex;flex-direction:column;gap:6px}
-  
+  /* Ensure the actions area never shrinks off-screen */
+.role-actions { flex: 0 0 auto; }
+.role-row { align-items: center; }
+.role-row > .grow { min-width: 0; }           /* allow title/sub to ellipsis */
+.role-row .role-actions .btn { display: inline-flex; }
+
+/* Make sure Select is always visible even if styles collide */
+.selectBtn { display: inline-flex !important; visibility: visible !important; }
+
+/* If resume is missing we hide it, but keep the actions container visible */
+.resumeLink[hidden] { display: none !important; }
