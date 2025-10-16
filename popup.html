@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Universal Job Autofill</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 12px; width: 360px; }
+    .row { margin-bottom: 10px; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 8px; }
+    button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+    .muted { color: #6b7280; font-size: 12px; margin-top: 8px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin: 8px 0; }
+    #profilesView { display: none; }
+  </style>
+</head>
+<body>
+  <div id="signinView">
+    <div class="row"><strong>Sign in</strong></div>
+    <div class="row"><input id="email" placeholder="Email" /></div>
+    <div class="row"><input id="password" placeholder="Password" type="password" /></div>
+    <div class="row"><button id="btnSignin">Sign in</button></div>
+    <div class="muted">After sign in, we’ll fetch your demo profiles and let you choose one to fill.</div>
+  </div>
+
+  <div id="profilesView">
+    <div class="row"><strong>Select a profile</strong></div>
+    <div class="row">
+      <select id="profileSelect"></select>
+    </div>
+    <div class="row">
+      <button id="btnUseProfile">Use this resume and Fill</button>
+    </div>
+    <div class="row">
+      <button id="btnFillOnly">Fill with currently selected</button>
+    </div>
+    <div class="muted">Open the application form tab before clicking Fill.</div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
