@@ -698,40 +698,72 @@
 //     }
 //   })();
   
-
+/* content.js — bridge & progress tap */
 (function () {
   const DEBUG = true;
+  const log  = (...a)=>DEBUG&&console.log(`[AF][${top===window?'TOP':'IFRAME'}][${location.hostname}]`, ...a);
+  const warn = (...a)=>DEBUG&&console.warn('[AF][WARN]', ...a);
+
+  // Ignore known non-fill frames
   const IGNORE_HOSTS = [
     /(^|\.)newassets\.hcaptcha\.com$/i,
     /(^|\.)hcaptcha\.com$/i,
     /(^|\.)google\.com$/i,
     /(^|\.)recaptcha\.net$/i,
     /(^|\.)doubleclick\.net$/i,
-    /(^|\.)googletagmanager\.com$/i
+    /(^|\.)googletagmanager\.com$/i,
+    /(^|\.)gstatic\.com$/i,
+    /(^|\.)content\.googleapis\.com$/i
   ];
-
-  function log(...a){ if(DEBUG){ const m = (top===window?"TOP":"IFRAME"); console.log(`[AF-BRIDGE][${m}][${location.hostname}]`, ...a); } }
-
   if (IGNORE_HOSTS.some(rx => rx.test(location.hostname))) {
-    log("Ignoring frame:", location.hostname);
+    log('Ignoring frame by host rule:', location.hostname);
     return;
   }
 
-  log("Bridge loaded", { url: location.href });
+  log('Content loaded', { url: location.href });
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    try {
-      if (msg?.type === "FILL_PROFILE" || msg?.action === "fill_form") {
-        log("Forwarding profile to page world");
-        window.postMessage({ type: "AF_FILL", profile: msg.profile, __trace: msg.__trace || {} }, "*");
-        sendResponse({ ok: true });
-        return true;
-      }
-      sendResponse({ ok: false, error: "Unknown message" });
-    } catch (e) {
-      console.error("[AF-BRIDGE] error:", e);
-      sendResponse({ ok: false, error: String(e?.message || e) });
+  // -- handshake: let BG know this frame can receive fill
+  window.addEventListener('message', (ev)=>{
+    const d = ev.data || {};
+    if (d && d.type === 'AF_PING') {
+      window.postMessage({ type:'AF_PONG', frame: location.href }, '*');
     }
+  });
+
+  // -- listen to page progress & log (you can forward to popup later)
+  window.addEventListener('message', (ev)=>{
+    const d = ev.data || {};
+    if (!d || !d.type) return;
+    if (d.type === 'AF_PROGRESS') {
+      log(`Progress: ${d.done}/${d.total} | filled=${d.filled} | ${d.label||''}`);
+    } else if (d.type === 'AF_DONE') {
+      log(`Done: filled=${d.filled}/${d.tasks}`);
+    }
+  });
+
+  // -- BG → CS messages (accept both names)
+  chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
+    (async () => {
+      if (!msg) return sendResponse({ ok:false, error:'Empty message' });
+
+      if (msg.type === 'PING_FRAMES') {
+        // BG can call this to check at least one frame is alive
+        window.postMessage({ type:'AF_PING' }, '*');
+        sendResponse({ ok:true });
+        return;
+      }
+
+      if (msg.type === 'FILL_PROFILE' || msg.action === 'fill_form' || msg.type === 'START_FILL') {
+        const profile = msg.profile;
+        if (!profile) { sendResponse({ ok:false, error:'No profile supplied' }); return; }
+        // forward to injected (page world)
+        window.postMessage({ type:'AF_FILL', profile, __trace: msg.__trace || {} }, '*');
+        sendResponse({ ok:true });
+        return;
+      }
+
+      sendResponse({ ok:false, error:'Unknown message type' });
+    })();
     return true;
   });
 })();

@@ -133,7 +133,7 @@ async function load(keys) {
 
 async function fetchProfilesForUser(userId, token) {
   if (!userId) throw new Error("Missing userId");
-  const url = `${BASE_URL}/api/profiles/getdemoprofiles/${encodeURIComponent(userId)}`;
+  const url = `${BASE_URL}/api/profiles/getprofiles/${encodeURIComponent(userId)}`;
   log("GET", url);
   const res = await fetch(url, {
     headers: token ? { "Authorization": `Bearer ${token}` } : {}
