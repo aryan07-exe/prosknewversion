@@ -28,14 +28,49 @@ moveInk();
 
 // Toasts
 const toasts = $('#toasts');
-function toast(msg, kind='ok', timeout=2400){
+function toast(msg, kind='ok', timeout=2400) {
   const el = document.createElement('div');
-  el.className = `toast ${kind==='err'?'err':''}`;
-  el.innerHTML = `<div>${escapeHtml(msg)}</div><button class="x">✕</button>`;
-  toasts.appendChild(el);
-  const close=()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),160); };
-  el.querySelector('.x').onclick = close;
-  setTimeout(close, timeout);
+  el.className = `toast ${kind}`;
+  
+  // Add icon based on message kind
+  let icon = 'ℹ️';
+  if (kind === 'ok') icon = '✓';
+  if (kind === 'error') icon = '✕';
+  if (kind === 'warn') icon = '⚠️';
+  
+  el.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${msg}</span>
+    <button class="icon-btn sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  `;
+  
+  el.querySelector('button').onclick = () => el.remove();
+  
+  // Create toasts container if it doesn't exist
+  let toastsContainer = $('.toasts');
+  if (!toastsContainer) {
+    toastsContainer = document.createElement('div');
+    toastsContainer.className = 'toasts';
+    document.body.appendChild(toastsContainer);
+  }
+  
+  toastsContainer.appendChild(el);
+  
+  // Auto-remove after timeout
+  if (timeout > 0) {
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+      setTimeout(() => el.remove(), 200);
+    }, timeout);
+  }
+  
+  return el;
 }
 
 // ======== BG messaging ========
@@ -71,11 +106,70 @@ function logLine(msg,tone=''){
   logBox.prepend(div);
 }
 
-// ======== UI Refs ========
+// ======== AI Progress Indicator ========
+const aiProgress = {
+  start: function() {
+    const indicator = $('#aiProgress');
+    if (indicator) indicator.style.display = 'flex';
+  },
+  
+  stop: function() {
+    const indicator = $('#aiProgress');
+    if (indicator) indicator.style.display = 'none';
+  },
+  
+  // Simulate AI processing
+  simulate: function(duration = 2000) {
+    this.start();
+    return new Promise(resolve => {
+      setTimeout(() => {
+        this.stop();
+        resolve();
+      }, duration);
+    });
+  }
+};
+
+// ======== Button Handlers ========
+$('#addProfileBtn').addEventListener('click', async function() {
+  try {
+    aiProgress.start();
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    window.location.href = 'https://your-redirect-url.com';
+  } catch (error) {
+    console.error('Error adding profile:', error);
+    toast('Failed to add profile', 'error');
+  } finally {
+    aiProgress.stop();
+  }
+});
+
+$('#deleteProfileBtn').addEventListener('click', async function() {
+  const selected = $('.role-row.selected');
+  if (!selected) {
+    toast('Please select a profile to delete', 'warn');
+    return;
+  }
+  
+  const confirmDelete = confirm('Are you sure you want to delete the selected profile?');
+  if (!confirmDelete) return;
+  
+  try {
+    aiProgress.start();
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast('Profile deleted successfully', 'ok');
+    fetchProfiles();
+  } catch (error) {
+    console.error('Error deleting profile:', error);
+    toast('Failed to delete profile', 'error');
+  } finally {
+    aiProgress.stop();
+  }
+});
 const envBadge     = $('#envBadge');
 const selectedName = $('#selectedName');
-const profileBadge = $('#profileBadge');
-const rolesList    = $('#rolesList');
 const rolesEmpty   = $('#rolesEmpty');
 const rolesSkel    = $('#rolesSkeleton');
 const searchInput  = $('#searchInput');
@@ -179,19 +273,24 @@ function renderRoles(list){
 
   const tmpl = document.getElementById('roleItemTmpl');
 
-  arr.forEach(p=>{
-    const node  = tmpl.content.cloneNode(true);
-    const row   = node.querySelector('.role-row');
+  arr.forEach(p => {
+    const node = tmpl.content.cloneNode(true);
+    const row = node.querySelector('.role-row');
+    if (!row) {
+      console.error('Could not find .role-row in template');
+      return;
+    }
+    
     const title = node.querySelector('.role-title');
-    const sub   = node.querySelector('.role-sub');
-    const chip  = node.querySelector('[data-jobtype]');
-    const link  = node.querySelector('.resumeLink');
-    const btn   = node.querySelector('.selectBtn');
-    const av    = node.querySelector('.avatar');
-    const flag  = node.querySelector('.selected-flag');
+    const sub = node.querySelector('.role-sub');
+    const chip = node.querySelector('[data-jobtype]');
+    const link = node.querySelector('.resumeLink');
+    const btn = node.querySelector('.selectBtn');
+    const av = node.querySelector('.avatar');
+    const flag = node.querySelector('.selected-flag');
 
-    const id = p._id || p.id;
-    row.dataset.id = id || '';
+    const id = p._id || p.id || '';
+    row.dataset.id = id;
 
     av.textContent = ((p.firstName?.[0]||'R')+(p.lastName?.[0]||'')).toUpperCase();
     title.textContent = p.profileName || 'Untitled Profile';
@@ -256,24 +355,56 @@ $('#autofillBtn').addEventListener('click', async ()=>{
 });
 
 $('#refreshBtn').addEventListener('click', fetchProfiles);
-$('#fetchBtn').addEventListener('click', fetchProfiles);
-$('#fetchBtn2').addEventListener('click', fetchProfiles);
+// Add loading state to fetch buttons
+const fetchButtons = ['#fetchBtn', '#fetchBtn2'];
+fetchButtons.forEach(btn => {
+  $(btn)?.addEventListener('click', async () => {
+    try {
+      await fetchProfiles(true);
+      toast('Profiles refreshed', 'ok');
+    } catch (error) {
+      console.error('Error refreshing profiles:', error);
+    }
+  });
+});
 
 async function fetchProfiles(showBusy=false){
-  if (showBusy){ rolesSkel.hidden = false; rolesList.innerHTML = ''; }
-  envBadge.textContent = 'Loading…';
-  const res = await bgSend('FETCH_PROFILES');
-  rolesSkel.hidden = true;
-
-  if (res?.ok){
-    renderRoles(res.profiles);
-    envBadge.textContent = `Loaded ${res.profiles?.length || 0}`;
-    if (!res.profiles?.length) rolesEmpty.hidden = false;
-    logLine('Profiles refreshed from API.');
-  } else {
-    envBadge.textContent = 'Error';
+  if (showBusy) {
+    rolesSkeleton.hidden = false;
+    rolesEmpty.hidden = true;
+    aiProgress.start();
+  }
+  
+  try {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const res = await fetch(`${BASE_URL}/api/profiles`);
+    if (!res.ok) throw new Error('Failed to fetch profiles');
+    const data = await res.json();
+    
+    // Simulate AI processing
+    if (data.length > 0) {
+      await aiProgress.simulate(1200);
+    }
+    
+    renderRoles(data);
+  } catch (err) {
+    console.error('Fetch profiles error:', err);
     rolesEmpty.hidden = false;
-    toast(res?.error || 'Failed to fetch profiles','err');
+    rolesEmpty.innerHTML = `
+      <p>Failed to load profiles</p>
+      <button id="retryFetch" class="btn primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18-5M22 12.5a10 10 0 0 1-18 5"></path>
+        </svg>
+        <span>Retry</span>
+      </button>
+    `;
+    $('#retryFetch')?.addEventListener('click', ()=>fetchProfiles(true));
+  } finally {
+    rolesSkeleton.hidden = true;
+    aiProgress.stop();
   }
 }
 

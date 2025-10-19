@@ -28,6 +28,8 @@
 
     <main class="panes">
       <!-- APPLY -->
+      <div class="progress-indicator" id="progressIndicator" style="display:none;"><div class="progress-bar"></div></div>
+      <div class="progress-indicator" id="progressIndicator2" style="display:none;"><div class="progress-bar"></div></div>
       <section class="pane active" id="tab-apply">
         <div class="panel">
           <div class="panel-head">
@@ -62,6 +64,7 @@
                 <span class="muted sm">live</span>
               </div>
               <button id="clearLog" class="icon-btn sm" title="Clear">✕</button>
+              <button id="addProfileBtn" class="action-btn">Add Profile</button><button id="deleteProfileBtn" class="action-btn">Delete Profile</button>
             </div>
             <div class="log" id="statusLog"></div>
           </div>
@@ -77,12 +80,37 @@
               <p class="sub">Pick a profile/resume to use while applying.</p>
             </div>
             <div class="hstack gap8">
-              <input id="searchInput" class="input search" placeholder="Search…" />
-              <button id="fetchBtn" class="btn ghost">Fetch</button>
+              <div class="ai-progress" id="aiProgress" style="display: none;"></div>
+              <input id="searchInput" class="input search" placeholder="Search roles…" />
+              <button id="fetchBtn" class="btn ghost">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
           <div id="rolesList" class="list"></div>
+          
+          <div class="action-buttons">
+            <button id="addProfileBtn" class="btn primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Profile</span>
+            </button>
+            <button id="deleteProfileBtn" class="btn danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Delete Selected</span>
+            </button>
+          </div>
 
           <div class="skeleton-list" id="rolesSkeleton" hidden>
             <div class="skeleton item"></div>
@@ -91,8 +119,15 @@
           </div>
 
           <div class="empty" id="rolesEmpty" hidden>
-            <p>No profiles yet.</p>
-            <button id="fetchBtn2" class="btn ghost">Fetch from API</button>
+            <p>No profiles found</p>
+            <button id="fetchBtn2" class="btn primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Fetch from API</span>
+            </button>
           </div>
         </div>
       </section>
@@ -148,24 +183,27 @@
 
   <!-- Role Row Template (ALWAYS shows Select button) -->
 <template id="roleItemTmpl">
-  <div class="role-row" data-id="">
-    <div class="hstack gap10 grow">
-      <div class="avatar sm">R</div>
-      <div class="stack grow">
-        <div class="row between">
-          <div class="role-title ellipsis"></div>
-          <div class="hstack gap6 actions-right">
-            <span class="chip" data-jobtype>—</span>
-            <span class="selected-flag" hidden>✅ Selected</span>
-          </div>
-        </div>
-        <div class="role-sub ellipsis"></div>
+  <div class="role-row">
+    <div class="role-content">
+      <div class="avatar">R</div>
+      <div class="role-info">
+        <div class="role-title"></div>
+        <div class="role-sub"></div>
       </div>
     </div>
-    <!-- Keep a stable actions container so Select never collapses -->
-    <div class="hstack gap8 nowrap role-actions">
-      <a class="btn ghost sm resumeLink" target="_blank" rel="noopener">Resume</a>
-      <button class="btn primary sm selectBtn" type="button">Select</button>
+    <div class="role-actions">
+      <span class="chip" data-jobtype>—</span>
+      <a class="btn ghost sm resumeLink" target="_blank" rel="noopener" title="View Resume">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </a>
+      <button class="btn primary sm selectBtn" type="button">
+        <span class="btn-text">Select</span>
+        <span class="selected-flag" hidden>✓</span>
+      </button>
     </div>
   </div>
 </template>
