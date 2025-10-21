@@ -155,43 +155,49 @@ const aiProgress = {
 };
 
 // ======== Button Handlers ========
-$('#addProfileBtn').addEventListener('click', async function() {
-  try {
-    aiProgress.start();
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    window.location.href = 'https://your-redirect-url.com';
-  } catch (error) {
-    console.error('Error adding profile:', error);
-    toast('Failed to add profile', 'error');
-  } finally {
-    aiProgress.stop();
-  }
-});
+const addProfileBtn = $('#addProfileBtn');
+if (addProfileBtn) {
+  addProfileBtn.addEventListener('click', async function() {
+    try {
+      aiProgress.start();
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      window.location.href = 'https://your-redirect-url.com';
+    } catch (error) {
+      console.error('Error adding profile:', error);
+      toast('Failed to add profile', 'error');
+    } finally {
+      aiProgress.stop();
+    }
+  });
+}
 
-$('#deleteProfileBtn').addEventListener('click', async function() {
-  const selected = $('.role-row.selected');
-  if (!selected) {
-    toast('Please select a profile to delete', 'warn');
-    return;
-  }
-  
-  const confirmDelete = confirm('Are you sure you want to delete the selected profile?');
-  if (!confirmDelete) return;
-  
-  try {
-    aiProgress.start();
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast('Profile deleted successfully', 'ok');
-    fetchProfiles();
-  } catch (error) {
-    console.error('Error deleting profile:', error);
-    toast('Failed to delete profile', 'error');
-  } finally {
-    aiProgress.stop();
-  }
-});
+const deleteProfileBtn = $('#deleteProfileBtn');
+if (deleteProfileBtn) {
+  deleteProfileBtn.addEventListener('click', async function() {
+    const selected = $('.role-row.selected');
+    if (!selected) {
+      toast('Please select a profile to delete', 'warn');
+      return;
+    }
+    
+    const confirmDelete = confirm('Are you sure you want to delete the selected profile?');
+    if (!confirmDelete) return;
+    
+    try {
+      aiProgress.start();
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast('Profile deleted successfully', 'ok');
+      fetchProfiles();
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      toast('Failed to delete profile', 'error');
+    } finally {
+      aiProgress.stop();
+    }
+  });
+}
 const envBadge     = $('#envBadge');
 const selectedName = $('#selectedName');
 const rolesEmpty   = $('#rolesEmpty');
@@ -208,22 +214,67 @@ const sheet = $('#signinSheet');
 const signinBtn = $('#signinOpenBtn');
 
 function updateSignInButton(isSignedIn) {
-  if (isSignedIn) {
-    signinBtn.style.display = 'none';
-  } else {
-    signinBtn.style.display = 'flex';
+  const signinBtn = $('#signinOpenBtn');
+  const signoutBtn = $('#signoutBtn');
+  if (signinBtn) {
+    signinBtn.style.display = isSignedIn ? 'none' : 'flex';
+  }
+  if (signoutBtn) {
+    signoutBtn.style.display = isSignedIn ? 'flex' : 'none';
   }
 }
 
-signinBtn.addEventListener('click', ()=>sheet.classList.remove('hidden'));
-$('#signinCloseBtn').addEventListener('click', ()=>sheet.classList.add('hidden'));
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
-$('#btnSignin').addEventListener('click', doSignin);
-$('#password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin(); });
+if (signinBtn && sheet) {
+  signinBtn.addEventListener('click', ()=>sheet.classList.remove('hidden'));
+}
+
+const signinCloseBtn = $('#signinCloseBtn');
+if (signinCloseBtn && sheet) {
+  signinCloseBtn.addEventListener('click', ()=>sheet.classList.add('hidden'));
+}
+
+if (sheet) {
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
+}
+
+const btnSignin = $('#btnSignin');
+if (btnSignin) {
+  btnSignin.addEventListener('click', doSignin);
+}
+
+const passwordInput = $('#password');
+if (passwordInput) {
+  passwordInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin(); });
+}
+
+// Sign-out button handler
+const signoutBtn = $('#signoutBtn');
+if (signoutBtn) {
+  signoutBtn.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to sign out? This will clear all your data.')) {
+      const res = await bgSend('SIGNOUT');
+      if (res?.ok) {
+        toast('Signed out successfully', 'ok');
+        updateSignInButton(false);
+        if (envBadge) envBadge.textContent = 'Not signed in';
+        if (selectedName) selectedName.textContent = '—';
+        if (rolesList) rolesList.innerHTML = '';
+        if (rolesEmpty) rolesEmpty.hidden = false;
+        renderProfileDetails(null);
+      } else {
+        toast('Failed to sign out', 'error');
+      }
+    }
+  });
+}
 
 async function doSignin(){
-  const email = $('#email').value.trim();
-  const pwd   = $('#password').value.trim();
+  const emailInput = $('#email');
+  const pwdInput = $('#password');
+  if (!emailInput || !pwdInput) return;
+  
+  const email = emailInput.value.trim();
+  const pwd   = pwdInput.value.trim();
   if (!email || !pwd){ toast('Enter email & password','error'); return; }
   try{
     const data = await apiSignin(email, pwd);
@@ -231,10 +282,10 @@ async function doSignin(){
     if (!token || !userId) throw new Error('Missing token or userId');
     const saved = await bgSend('SIGNIN_SAVE',{ token, userId });
     if (!saved?.ok) throw new Error(saved?.error || 'Could not save signin');
-    sheet.classList.add('hidden');
+    if (sheet) sheet.classList.add('hidden');
     toast('Successfully signed in to ProSk Assist', 'ok');
     updateSignInButton(true);
-    envBadge.textContent = 'Signed in';
+    if (envBadge) envBadge.textContent = 'Signed in';
     await fetchProfiles(true);
     const st = await bgSend('GET_STATE');
     renderSelectedName(st?.state?.selectedProfile || null);
@@ -246,15 +297,28 @@ async function doSignin(){
 
 // ======== Render helpers ========
 function renderSelectedName(p){
-  selectedName.textContent = p ? (p.profileName || ([p.firstName,p.lastName].filter(Boolean).join(' ') || '—')) : '—';
-  profileBadge.textContent = p ? 'Selected' : '—';
+  if (selectedName) {
+    selectedName.textContent = p ? (p.profileName || ([p.firstName,p.lastName].filter(Boolean).join(' ') || '—')) : '—';
+  }
+  const profileBadge = $('#profileBadge');
+  if (profileBadge) {
+    profileBadge.textContent = p ? 'Selected' : '—';
+  }
   const a = $('.profile-head .avatar');
-  const initials = (p ? (p.firstName?.[0] || '') + (p.lastName?.[0] || '') : 'A') || 'A';
-  a.textContent = initials.toUpperCase();
-  phName.textContent  = p ? (p.profileName || [p.firstName,p.lastName].filter(Boolean).join(' ') || '—') : '—';
-  phEmail.textContent = p?.email || '—';
-  if (p?.resumeUrl) { phResume.href = p.resumeUrl; phResume.style.display='inline-flex'; }
-  else phResume.style.display='none';
+  if (a) {
+    const initials = (p ? (p.firstName?.[0] || '') + (p.lastName?.[0] || '') : 'A') || 'A';
+    a.textContent = initials.toUpperCase();
+  }
+  if (phName) {
+    phName.textContent  = p ? (p.profileName || [p.firstName,p.lastName].filter(Boolean).join(' ') || '—') : '—';
+  }
+  if (phEmail) {
+    phEmail.textContent = p?.email || '—';
+  }
+  if (phResume) {
+    if (p?.resumeUrl) { phResume.href = p.resumeUrl; phResume.style.display='inline-flex'; }
+    else phResume.style.display='none';
+  }
 
   // highlight selected in Roles list
   highlightSelectedInList(p?._id || p?.id);
@@ -374,21 +438,35 @@ function highlightSelectedInList(selectedId){
 }
 
 // ======== Search filter ========
-$('#searchInput').addEventListener('input', ()=>{
-  const q = searchInput.value.toLowerCase();
-  $$('.role-row', rolesList).forEach(el=>{
-    const t = el.innerText.toLowerCase();
-    el.style.display = t.includes(q) ? '' : 'none';
+const searchInputEl = $('#searchInput');
+if (searchInputEl) {
+  searchInputEl.addEventListener('input', ()=>{
+    const q = searchInputEl.value.toLowerCase();
+    if (rolesList) {
+      $$('.role-row', rolesList).forEach(el=>{
+        const t = el.innerText.toLowerCase();
+        el.style.display = t.includes(q) ? '' : 'none';
+      });
+    }
   });
-});
+}
 
 // ======== Actions ========
-$('#autofillBtn').addEventListener('click', async ()=>{
-  logLine('Starting auto-fill…');
-  const res = await bgSend('START_FILL');
-  if (res?.ok){ logLine('Fill request sent to all frames.'); toast('Autofill started', 'ok'); }
-  else { logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err'); toast(res?.error || 'Autofill failed', 'error'); }
-});
+const autofillBtn = $('#autofillBtn');
+if (autofillBtn) {
+  autofillBtn.addEventListener('click', async ()=>{
+    if (logBox) logLine('Starting auto-fill…');
+    const res = await bgSend('START_FILL');
+    if (res?.ok){ 
+      if (logBox) logLine('Fill request sent to all frames.'); 
+      toast('Autofill started', 'ok'); 
+    }
+    else { 
+      if (logBox) logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err'); 
+      toast(res?.error || 'Autofill failed', 'error'); 
+    }
+  });
+}
 
 // Open Panel button
 $('#openPanelBtn')?.addEventListener('click', async ()=>{
@@ -415,24 +493,30 @@ $('#openPanelBtn')?.addEventListener('click', async ()=>{
   }
 });
 
-$('#refreshBtn').addEventListener('click', fetchProfiles);
+const refreshBtn = $('#refreshBtn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', fetchProfiles);
+}
 // Add loading state to fetch buttons
 const fetchButtons = ['#fetchBtn', '#fetchBtn2'];
 fetchButtons.forEach(btn => {
-  $(btn)?.addEventListener('click', async () => {
-    try {
-      await fetchProfiles(true);
-      toast('Profiles refreshed', 'ok');
-    } catch (error) {
-      console.error('Error refreshing profiles:', error);
-    }
-  });
+  const btnEl = $(btn);
+  if (btnEl) {
+    btnEl.addEventListener('click', async () => {
+      try {
+        await fetchProfiles(true);
+        toast('Profiles refreshed', 'ok');
+      } catch (error) {
+        console.error('Error refreshing profiles:', error);
+      }
+    });
+  }
 });
 
 async function fetchProfiles(showBusy=false){
   if (showBusy) {
-    rolesSkeleton.hidden = false;
-    rolesEmpty.hidden = true;
+    if (rolesSkeleton) rolesSkeleton.hidden = false;
+    if (rolesEmpty) rolesEmpty.hidden = true;
     aiProgress.start();
   }
   
@@ -483,13 +567,22 @@ async function fetchProfiles(showBusy=false){
 
   if (Array.isArray(state.profilesCache) && state.profilesCache.length){
     renderRoles(state.profilesCache);
-    envBadge.textContent = `${state.profilesCache.length} Profile${state.profilesCache.length !== 1 ? 's' : ''}`;
+    if (envBadge) {
+      envBadge.textContent = `${state.profilesCache.length} Profile${state.profilesCache.length !== 1 ? 's' : ''}`;
+    }
   } else {
-    rolesEmpty.hidden = false;
-    envBadge.textContent = isSignedIn ? 'Signed in' : 'Not signed in';
+    if (rolesEmpty) rolesEmpty.hidden = false;
+    if (envBadge) {
+      envBadge.textContent = isSignedIn ? 'Signed in' : 'Not signed in';
+    }
   }
 
-  logLine('ProSk Assist ready.');
+  if (logBox) logLine('ProSk Assist ready.');
+  
+  // Close button handler - only way to close the popup
+  $('#closePopupBtn')?.addEventListener('click', () => {
+    window.close();
+  });
 })();
 
 

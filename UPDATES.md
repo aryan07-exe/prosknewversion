@@ -1,4 +1,87 @@
-# ProSk Assist - UI Updates & New Features
+# ProSk Assist - Latest Updates
+
+## Recent Changes (2025-10-21) - Major UI Overhaul
+
+### 🎉 **Chrome Side Panel Integration**
+- Added Chrome Side Panel API support for a dockable interface
+- Clicking the extension icon now opens a professional side panel
+- Side panel includes all features: sign-in, profiles, auto-fill, and details
+- Resizable and dockable to the browser sidebar
+- Uses the same design as the popup for consistency
+
+### 🚀 **Enhanced Floating Panel (Full-Featured)**
+- Completely redesigned the floating panel with tabbed interface
+- **Three Tabs:**
+  1. **Apply Tab** - Quick auto-fill button and status
+  2. **Profiles Tab** - Browse and select from all available profiles
+  3. **Details Tab** - View detailed information about selected profile
+- Added sign-in/sign-out buttons directly in the panel header
+- Refresh profiles button to sync with backend
+- Click on any profile to select it instantly
+- Fully draggable and remembers position
+- Only closes when you click the close button
+
+### 🔐 **Sign-Out Button Moved to Popup**
+- Removed sign-out button from the small on-page panel
+- Added sign-out button to the extension popup header
+- Sign-out button appears only when user is signed in
+- Includes confirmation dialog to prevent accidental sign-outs
+- Clears all local storage and updates UI state
+
+## Previous Changes (2025-10-21)
+
+### 1. **Extension Popup Close Button**
+- Added a dedicated close button (X icon) in the top-right corner of the extension popup
+- The popup now only closes when the close button is clicked
+- Prevents accidental closure when clicking outside the popup
+- Located in the header actions section alongside sign-in and refresh buttons
+
+### 2. **Panel Sign-Out Button**
+- Added a professional sign-out button to the draggable on-page panel
+- Button features a red danger theme matching the extension's color scheme
+- Includes a confirmation dialog to prevent accidental sign-outs
+- Clears all local storage data including:
+  - Authentication token
+  - User ID
+  - Cached profiles
+  - Selected profile data
+- Shows success notification and automatically closes the panel after sign-out
+- Properly communicates with the background script for clean sign-out
+
+### Technical Implementation
+- **Files Modified:**
+  - `popup.html` - Added close button to header
+  - `popup.js` - Added close button event handler
+  - `panel.js` - Added sign-out button with styling and functionality
+  - `background.js` - Added SIGNOUT message handler
+
+### UI/UX Improvements
+- Close button uses consistent Feather Icons SVG style
+- Sign-out button styled with danger theme (red gradient)
+- Hover effects and smooth transitions on all buttons
+- Confirmation dialog prevents accidental data loss
+- Success/error notifications for user feedback
+
+---
+
+## Previous Updates
+
+### Theme & Branding
+- Professional red (#dc2626) and black (#0a0a0a) dark theme
+- Named "ProSk Assist - Auto Apply Assistant" with PA logo
+- All emojis replaced with professional SVG icons (Feather Icons style)
+
+### Features
+- Sign-in button hides after login with proper state management
+- Draggable floating panel that remembers position
+- Professional toast notifications with color-coded icons
+- Auto-fill functionality for job applications
+
+### Tech Stack
+- Manifest V3
+- Chrome Extension APIs
+- Vanilla JavaScript
+- No external dependencies - UI Updates & New Features
 
 ## Summary of Changes
 

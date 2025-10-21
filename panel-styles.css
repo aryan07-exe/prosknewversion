@@ -1,0 +1,788 @@
+/* ProSk Assist - Floating Panel Styles */
+.prosk-panel {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  width: 380px;
+  min-height: 560px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #ffffff;
+  user-select: none;
+  backdrop-filter: blur(10px);
+}
+
+.prosk-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #262626;
+  border-radius: 16px 16px 0 0;
+  cursor: move;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.prosk-panel-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prosk-panel-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 16px;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.prosk-panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prosk-panel-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+.prosk-panel-subtitle {
+  font-size: 11px;
+  color: #a3a3a3;
+}
+
+.prosk-panel-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.prosk-panel-icon-btn {
+  background: transparent;
+  border: 1px solid #262626;
+  color: #a3a3a3;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prosk-panel-icon-btn.prosk-sm {
+  padding: 6px;
+}
+
+.prosk-panel-icon-btn:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.prosk-panel-close {
+  background: transparent;
+  border: 1px solid #262626;
+  color: #a3a3a3;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prosk-panel-close:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.prosk-panel-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 10px 12px 4px;
+  background: #0a0a0a;
+  border-bottom: 1px solid #262626;
+}
+
+.prosk-panel-tab {
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #a3a3a3;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prosk-panel-tab:hover {
+  background: rgba(220, 38, 38, 0.05);
+  color: #ffffff;
+}
+
+.prosk-panel-tab.active {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: #dc2626;
+}
+
+.prosk-panel-body {
+  padding: 10px;
+  max-height: 560px;
+  overflow-y: auto;
+  background: #0a0a0a;
+  border-radius: 0 0 16px 16px;
+}
+
+.prosk-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.prosk-panel-body::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.prosk-panel-body::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 3px;
+}
+
+.prosk-panel-body::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+.prosk-panel-pane {
+  display: none;
+}
+
+.prosk-panel-pane.active {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prosk-panel-card {
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.prosk-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prosk-panel-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #262626;
+}
+
+.prosk-panel-label {
+  font-size: 15px;
+  color: #e0e9ff;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.prosk-sub {
+  font-size: 12.5px;
+  color: #a3a3a3;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.prosk-panel-value {
+  font-size: 13px;
+  color: #dc2626;
+  padding: 8px 12px;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prosk-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a3a3a3;
+}
+
+.prosk-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.prosk-status-ready {
+  background: #39d98a;
+  box-shadow: 0 0 12px rgba(61, 214, 146, 0.7);
+}
+
+.prosk-status-filling {
+  background: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+}
+
+.prosk-panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #262626;
+  background: #1f1f1f;
+  color: #ffffff;
+}
+
+.prosk-btn-primary {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.prosk-btn-primary:hover {
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+  transform: translateY(-2px);
+}
+
+.prosk-btn-ghost {
+  background: transparent;
+  border-color: #262626;
+}
+
+.prosk-btn-ghost:hover {
+  border-color: #333333;
+  background: #1a1a1a;
+  transform: translateY(-1px);
+}
+
+.prosk-panel-btn:active {
+  transform: translateY(0);
+}
+
+.prosk-panel-btn svg {
+  flex-shrink: 0;
+}
+
+.prosk-panel-btn.prosk-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.prosk-w100 {
+  width: 100%;
+}
+
+.prosk-panel-divider {
+  height: 1px;
+  background: #262626;
+  margin: 6px 0;
+}
+
+.prosk-hstack {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prosk-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prosk-muted {
+  color: #a3a3a3;
+}
+
+.prosk-sm {
+  font-size: 12px;
+}
+
+.prosk-log-card {
+  background: #141414;
+}
+
+.prosk-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #262626;
+}
+
+.prosk-log {
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a3a3a3;
+}
+
+.prosk-log::-webkit-scrollbar {
+  width: 4px;
+}
+
+.prosk-log::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.prosk-log::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 2px;
+}
+
+.prosk-log-line {
+  padding: 4px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.prosk-log-line:last-child {
+  border-bottom: none;
+}
+
+.prosk-log-line.prosk-log-err {
+  color: #ef4444;
+}
+
+.prosk-log-line.prosk-log-ok {
+  color: #10b981;
+}
+
+.prosk-roles-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prosk-roles-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.prosk-roles-list::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.prosk-roles-list::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 3px;
+}
+
+.prosk-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 12px;
+}
+
+.prosk-role-row:hover {
+  border-color: #333333;
+  background: #1a1a1a;
+}
+
+.prosk-role-row.prosk-selected {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.prosk-role-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.prosk-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #fff;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.prosk-role-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.prosk-role-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prosk-role-sub {
+  font-size: 12px;
+  color: #a3a3a3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prosk-role-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.prosk-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #061018;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.prosk-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.prosk-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prosk-profile-email {
+  font-size: 12px;
+  color: #a3a3a3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prosk-profile-details {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #ffffff;
+}
+
+.prosk-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prosk-kv-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prosk-kv-key {
+  font-size: 11px;
+  color: #a3a3a3;
+}
+
+.prosk-kv-value {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.prosk-panel-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #a3a3a3;
+}
+
+.prosk-panel-empty p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+}
+
+/* Sign-in Sheet */
+.prosk-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483648;
+  backdrop-filter: blur(4px);
+}
+
+.prosk-sheet.prosk-hidden {
+  display: none;
+}
+
+.prosk-sheet-card {
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.prosk-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #262626;
+}
+
+.prosk-sheet-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.prosk-sheet-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prosk-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #a3a3a3;
+  margin-bottom: 6px;
+}
+
+.prosk-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.prosk-input:focus {
+  outline: none;
+  border-color: #dc2626;
+  background: #1a1a1a;
+}
+
+.prosk-input::placeholder {
+  color: #666666;
+}
+
+/* Toast Notifications */
+#prosk-toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2147483649;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.prosk-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  min-width: 280px;
+  max-width: 400px;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.prosk-toast-ok {
+  border-color: #10b981;
+}
+
+.prosk-toast-error {
+  border-color: #ef4444;
+}
+
+.prosk-toast-warn {
+  border-color: #f59e0b;
+}
+
+.prosk-toast-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prosk-toast-ok .prosk-toast-icon {
+  color: #10b981;
+}
+
+.prosk-toast-error .prosk-toast-icon {
+  color: #ef4444;
+}
+
+.prosk-toast-warn .prosk-toast-icon {
+  color: #f59e0b;
+}
+
+.prosk-toast-message {
+  flex: 1;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.prosk-toast-close {
+  background: transparent;
+  border: none;
+  color: #a3a3a3;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.prosk-toast-close:hover {
+  color: #ffffff;
+}
+
+/* Minimized Icon */
+.prosk-minimized-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2147483647;
+  transition: all 0.3s ease;
+  animation: proskPulse 2s infinite;
+}
+
+.prosk-minimized-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.6);
+}
+
+.prosk-minimized-icon:active {
+  transform: scale(0.95);
+}
+
+.prosk-minimized-logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.prosk-minimized-tooltip {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  background: #1a1a1a;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  border: 1px solid #262626;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.prosk-minimized-icon:hover .prosk-minimized-tooltip {
+  opacity: 1;
+}
+
+@keyframes proskPulse {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5);
+  }
+  50% {
+    box-shadow: 0 8px 32px rgba(220, 38, 38, 0.7);
+  }
+}

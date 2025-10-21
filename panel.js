@@ -1,356 +1,380 @@
-/* ProSk Assist - Draggable On-Page Panel */
+/* ProSk Assist - Enhanced Draggable On-Page Panel (Full Featured) */
 (function() {
   'use strict';
   
-  // Prevent multiple injections
   if (window.__proskPanelInjected) return;
   window.__proskPanelInjected = true;
 
   const PANEL_ID = 'prosk-assist-panel';
+  const BASE_URL = "https://proskai-backend.onrender.com";
+  
   let panel = null;
   let isDragging = false;
-  let currentX = 0;
-  let currentY = 0;
-  let initialX = 0;
-  let initialY = 0;
-  let xOffset = 0;
-  let yOffset = 0;
+  let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+  
+  let state = { token: null, userId: null, selectedProfile: null, profilesCache: [] };
 
-  // Create panel HTML
-  function createPanel() {
-    if (document.getElementById(PANEL_ID)) return;
-
-    const panelHTML = `
-      <div id="${PANEL_ID}" class="prosk-panel">
-        <div class="prosk-panel-header" id="prosk-panel-header">
-          <div class="prosk-panel-brand">
-            <div class="prosk-panel-logo">PA</div>
-            <div class="prosk-panel-title">
-              <span class="prosk-panel-name">ProSk Assist</span>
-              <span class="prosk-panel-subtitle">Auto Apply Assistant</span>
-            </div>
-          </div>
-          <button class="prosk-panel-close" id="prosk-panel-close" title="Close Panel">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="prosk-panel-body">
-          <div class="prosk-panel-section">
-            <div class="prosk-panel-label">Selected Profile</div>
-            <div class="prosk-panel-value" id="prosk-selected-profile">No profile selected</div>
-          </div>
-          <div class="prosk-panel-section">
-            <div class="prosk-panel-label">Status</div>
-            <div class="prosk-panel-status">
-              <span class="prosk-status-dot prosk-status-ready"></span>
-              <span>Ready to fill</span>
-            </div>
-          </div>
-          <button class="prosk-panel-btn prosk-btn-primary" id="prosk-fill-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <span>Auto-Fill Form</span>
-          </button>
-          <button class="prosk-panel-btn prosk-btn-secondary" id="prosk-select-profile-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>Select Profile</span>
-          </button>
-        </div>
-      </div>
-    `;
-
-    // Inject CSS
-    const style = document.createElement('style');
-    style.textContent = `
-      .prosk-panel {
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        width: 320px;
-        background: #1a1a1a;
-        border: 1px solid #262626;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-        z-index: 999999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        color: #ffffff;
-        user-select: none;
-        backdrop-filter: blur(10px);
-      }
-
-      .prosk-panel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 16px;
-        background: linear-gradient(135deg, #1f1f1f, #1a1a1a);
-        border-bottom: 1px solid #262626;
-        border-radius: 12px 12px 0 0;
-        cursor: move;
-      }
-
-      .prosk-panel-brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .prosk-panel-logo {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #dc2626, #ef4444);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: #fff;
-        font-size: 14px;
-        letter-spacing: 1px;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-      }
-
-      .prosk-panel-title {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .prosk-panel-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: #ffffff;
-      }
-
-      .prosk-panel-subtitle {
-        font-size: 11px;
-        color: #a3a3a3;
-      }
-
-      .prosk-panel-close {
-        background: transparent;
-        border: 1px solid #262626;
-        color: #a3a3a3;
-        padding: 6px;
-        border-radius: 6px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-      }
-
-      .prosk-panel-close:hover {
-        background: rgba(220, 38, 38, 0.1);
-        border-color: #dc2626;
-        color: #dc2626;
-      }
-
-      .prosk-panel-body {
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-      }
-
-      .prosk-panel-section {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .prosk-panel-label {
-        font-size: 12px;
-        color: #a3a3a3;
-        font-weight: 500;
-      }
-
-      .prosk-panel-value {
-        font-size: 13px;
-        color: #ffffff;
-        padding: 8px 12px;
-        background: #0a0a0a;
-        border: 1px solid #262626;
-        border-radius: 8px;
-      }
-
-      .prosk-panel-status {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #ffffff;
-      }
-
-      .prosk-status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-
-      .prosk-status-ready {
-        background: #10b981;
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-      }
-
-      .prosk-status-filling {
-        background: #f59e0b;
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-      }
-
-      .prosk-panel-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: none;
-      }
-
-      .prosk-btn-primary {
-        background: linear-gradient(135deg, #dc2626, #ef4444);
-        color: #ffffff;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-      }
-
-      .prosk-btn-primary:hover {
-        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
-        transform: translateY(-1px);
-      }
-
-      .prosk-btn-secondary {
-        background: #1f1f1f;
-        color: #ffffff;
-        border: 1px solid #262626;
-      }
-
-      .prosk-btn-secondary:hover {
-        background: #262626;
-        border-color: #333333;
-        transform: translateY(-1px);
-      }
-
-      .prosk-panel-btn:active {
-        transform: translateY(0);
-      }
-
-      .prosk-panel-btn svg {
-        flex-shrink: 0;
-      }
-
-      @keyframes proskFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .prosk-panel {
-        animation: proskFadeIn 0.3s ease;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Inject panel
-    const container = document.createElement('div');
-    container.innerHTML = panelHTML;
-    document.body.appendChild(container.firstElementChild);
-
-    panel = document.getElementById(PANEL_ID);
-    
-    // Set initial position from storage or default
-    chrome.storage.local.get(['panelX', 'panelY'], (result) => {
-      if (result.panelX !== undefined && result.panelY !== undefined) {
-        xOffset = result.panelX;
-        yOffset = result.panelY;
-        setTranslate(xOffset, yOffset, panel);
-      }
-    });
-
-    setupEventListeners();
+  const $ = (s, el = panel || document) => el.querySelector(s);
+  const $$ = (s, el = panel || document) => Array.from(el.querySelectorAll(s));
+  
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  function setupEventListeners() {
-    const header = document.getElementById('prosk-panel-header');
-    const closeBtn = document.getElementById('prosk-panel-close');
-    const fillBtn = document.getElementById('prosk-fill-btn');
-    const selectProfileBtn = document.getElementById('prosk-select-profile-btn');
+  function toast(msg, kind = 'ok', timeout = 2400) {
+    const toastContainer = document.getElementById('prosk-toast-container') || (() => {
+      const c = document.createElement('div');
+      c.id = 'prosk-toast-container';
+      document.body.appendChild(c);
+      return c;
+    })();
+    
+    const iconMap = {
+      ok: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+      error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+      warn: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+    };
+    
+    const el = document.createElement('div');
+    el.className = `prosk-toast prosk-toast-${kind}`;
+    el.innerHTML = `<span class="prosk-toast-icon">${iconMap[kind] || iconMap.ok}</span><span class="prosk-toast-message">${escapeHtml(msg)}</span><button class="prosk-toast-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>`;
+    
+    el.querySelector('.prosk-toast-close').onclick = () => el.remove();
+    toastContainer.appendChild(el);
+    
+    if (timeout > 0) setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(10px)'; setTimeout(() => el.remove(), 200); }, timeout);
+  }
 
-    // Dragging
-    header.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
-
-    // Close button - only way to close the panel
-    closeBtn.addEventListener('click', () => {
-      if (panel) {
-        panel.remove();
-        window.__proskPanelInjected = false;
-      }
+  function bgSend(type, payload) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type, payload }, (resp) => {
+        resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : (resp || { ok: true }));
+      });
     });
+  }
 
-    // Fill button
-    fillBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'START_FILL' }, (response) => {
-        if (response?.ok) {
-          showNotification('Auto-fill started!', 'success');
+  async function apiSignin(email, password) {
+    const res = await fetch(`${BASE_URL}/api/auth/signin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    return res.json();
+  }
+
+  function logLine(msg, tone = '') {
+    const logBox = $('#prosk-status-log');
+    if (!logBox) return;
+    const line = document.createElement('div');
+    line.className = `prosk-log-line ${tone ? `prosk-log-${tone}` : ''}`;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function updateSignInButton(isSignedIn) {
+    const signinBtn = $('#prosk-panel-signin');
+    const signoutBtn = $('#prosk-panel-signout');
+    if (signinBtn) signinBtn.style.display = isSignedIn ? 'none' : 'flex';
+    if (signoutBtn) signoutBtn.style.display = isSignedIn ? 'flex' : 'none';
+  }
+
+  function renderSelectedName(profile) {
+    const el = $('#prosk-selected-profile');
+    if (!el) return;
+    if (profile) {
+      const name = profile.profileName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unnamed';
+      el.textContent = name;
+      el.style.color = '#dc2626';
+    } else {
+      el.textContent = '—';
+      el.style.color = '#a3a3a3';
+    }
+  }
+
+  function renderProfileDetails(profile) {
+    const header = $('#prosk-profile-header');
+    const details = $('#prosk-profile-details');
+    const empty = $('#prosk-profile-empty');
+    
+    if (!profile) {
+      if (header) header.style.display = 'none';
+      if (details) details.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    
+    if (empty) empty.style.display = 'none';
+    if (header) header.style.display = 'flex';
+    
+    const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'N/A';
+    const email = profile.email || 'N/A';
+    
+    if (header) {
+      const nameEl = $('#prosk-ph-name');
+      const emailEl = $('#prosk-ph-email');
+      const resumeEl = $('#prosk-ph-resume');
+      if (nameEl) nameEl.textContent = name;
+      if (emailEl) emailEl.textContent = email;
+      if (resumeEl && profile.resumeLink) {
+        resumeEl.href = profile.resumeLink;
+        resumeEl.style.display = 'flex';
+      } else if (resumeEl) {
+        resumeEl.style.display = 'none';
+      }
+    }
+    
+    if (details) {
+      const fields = [
+        ['Full Name', name],
+        ['Email', email],
+        ['Phone', `${profile.phoneCountryCode || ''} ${profile.phone || ''}`.trim() || 'N/A'],
+        ['City', profile.city || 'N/A'],
+        ['Job Type', profile.jobType || 'N/A'],
+        ['LinkedIn', profile.linkedinUrl || 'N/A'],
+        ['GitHub', profile.githubUrl || 'N/A'],
+        ['Portfolio', profile.portfolioUrl || 'N/A']
+      ];
+      
+      details.innerHTML = '<div class="prosk-kv">' + fields.map(([k, v]) => 
+        `<div class="prosk-kv-row"><div class="prosk-kv-key">${escapeHtml(k)}</div><div class="prosk-kv-value">${escapeHtml(v)}</div></div>`
+      ).join('') + '</div>';
+    }
+  }
+
+  function renderRoles(profiles) {
+    const list = $('#prosk-roles-list');
+    const empty = $('#prosk-roles-empty');
+    if (!list) return;
+    
+    if (!profiles || profiles.length === 0) {
+      list.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    
+    if (empty) empty.style.display = 'none';
+    
+    list.innerHTML = profiles.map(p => {
+      const id = p._id || p.id;
+      const name = p.profileName || `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Unnamed';
+      const email = p.email || 'No email';
+      const jobType = p.jobType || 'N/A';
+      const isSelected = state.selectedProfile && (state.selectedProfile._id === id || state.selectedProfile.id === id);
+      
+      return `
+        <div class="prosk-role-row ${isSelected ? 'prosk-selected' : ''}" data-profile-id="${escapeHtml(id)}">
+          <div class="prosk-role-content">
+            <div class="prosk-avatar">${name.charAt(0).toUpperCase()}</div>
+            <div class="prosk-role-info">
+              <div class="prosk-role-title">${escapeHtml(name)}</div>
+              <div class="prosk-role-sub">${escapeHtml(email)}</div>
+            </div>
+          </div>
+          <div class="prosk-role-actions">
+            <span class="prosk-chip">${escapeHtml(jobType)}</span>
+            ${p.resumeLink ? `<a href="${escapeHtml(p.resumeLink)}" target="_blank" class="prosk-panel-icon-btn prosk-sm" title="Resume"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></a>` : ''}
+            <button class="prosk-panel-btn prosk-btn-primary prosk-sm prosk-select-btn">${isSelected ? '✓' : 'Select'}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Attach click handlers
+    $$('.prosk-role-row').forEach(row => {
+      const profileId = row.dataset.profileId;
+      const profile = profiles.find(p => (p._id || p.id) === profileId);
+      
+      row.querySelector('.prosk-select-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const res = await bgSend('SELECT_PROFILE', { profile });
+        if (res?.ok) {
+          toast('Profile selected', 'ok');
+          await loadPanelState();
         } else {
-          showNotification('Failed to start auto-fill', 'error');
+          toast('Failed to select profile', 'error');
         }
       });
     });
+  }
 
-    // Select profile button - opens extension popup
-    selectProfileBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+  async function fetchProfiles(showToast = false) {
+    try {
+      logLine('Fetching profiles...');
+      const res = await bgSend('FETCH_PROFILES');
+      if (res?.ok && res.profiles) {
+        state.profilesCache = res.profiles;
+        renderRoles(res.profiles);
+        logLine(`Loaded ${res.profiles.length} profiles`, 'ok');
+        if (showToast) toast('Profiles refreshed', 'ok');
+      } else {
+        logLine('Failed to fetch profiles', 'err');
+        if (showToast) toast('Failed to fetch profiles', 'error');
+      }
+    } catch (err) {
+      console.error('Fetch profiles error:', err);
+      logLine('Error fetching profiles', 'err');
+      if (showToast) toast('Error fetching profiles', 'error');
+    }
+  }
+
+  async function loadPanelState() {
+    const st = await bgSend('GET_STATE');
+    state = st?.state || state;
+    
+    const isSignedIn = !!(state.token && state.userId);
+    updateSignInButton(isSignedIn);
+    renderSelectedName(state.selectedProfile);
+    renderProfileDetails(state.selectedProfile);
+    
+    if (state.profilesCache && state.profilesCache.length > 0) {
+      renderRoles(state.profilesCache);
+    }
+  }
+
+  function setupEventListeners() {
+    // Dragging
+    const header = $('#prosk-panel-header');
+    if (header) {
+      header.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', dragEnd);
+    }
+    
+    // Close button
+    $('#prosk-panel-close')?.addEventListener('click', () => {
+      panel.remove();
+      const minimizedIcon = document.getElementById('prosk-minimized-icon');
+      if (minimizedIcon) minimizedIcon.remove();
+      chrome.storage.local.remove('panelPosition');
     });
-
-    // Update selected profile
-    updateSelectedProfile();
+    
+    // Minimize button
+    $('#prosk-panel-minimize')?.addEventListener('click', () => {
+      const minimizedIcon = document.getElementById('prosk-minimized-icon');
+      if (panel && minimizedIcon) {
+        panel.style.display = 'none';
+        minimizedIcon.style.display = 'flex';
+        chrome.storage.local.set({ panelMinimized: true });
+      }
+    });
+    
+    // Restore from minimized icon
+    const minimizedIcon = document.getElementById('prosk-minimized-icon');
+    if (minimizedIcon) {
+      minimizedIcon.addEventListener('click', () => {
+        if (panel) {
+          panel.style.display = 'block';
+          minimizedIcon.style.display = 'none';
+          chrome.storage.local.set({ panelMinimized: false });
+        }
+      });
+    }
+    
+    // Tabs
+    $$('.prosk-panel-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        $$('.prosk-panel-tab').forEach(t => t.classList.remove('active'));
+        $$('.prosk-panel-pane').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        $(`#prosk-pane-${tab.dataset.tab}`)?.classList.add('active');
+      });
+    });
+    
+    // Sign-in button
+    $('#prosk-panel-signin')?.addEventListener('click', () => {
+      $('#prosk-signin-sheet')?.classList.remove('prosk-hidden');
+    });
+    
+    // Sign-in close
+    $('#prosk-signin-close')?.addEventListener('click', () => {
+      $('#prosk-signin-sheet')?.classList.add('prosk-hidden');
+    });
+    
+    // Sign-in submit
+    $('#prosk-btn-signin')?.addEventListener('click', async () => {
+      const email = $('#prosk-email')?.value;
+      const password = $('#prosk-password')?.value;
+      
+      if (!email || !password) {
+        toast('Please enter email and password', 'warn');
+        return;
+      }
+      
+      try {
+        const data = await apiSignin(email, password);
+        if (data.token && data.userId) {
+          const res = await bgSend('SIGNIN_SAVE', { token: data.token, userId: data.userId });
+          if (res?.ok) {
+            toast('Signed in successfully', 'ok');
+            $('#prosk-signin-sheet')?.classList.add('prosk-hidden');
+            await loadPanelState();
+            await fetchProfiles();
+          }
+        } else {
+          toast(data.message || 'Sign-in failed', 'error');
+        }
+      } catch (err) {
+        console.error('Sign-in error:', err);
+        toast('Sign-in error', 'error');
+      }
+    });
+    
+    // Sign-out button
+    $('#prosk-panel-signout')?.addEventListener('click', async () => {
+      const res = await bgSend('SIGNOUT');
+      if (res?.ok) {
+        toast('Signed out', 'ok');
+        state = { token: null, userId: null, selectedProfile: null, profilesCache: [] };
+        updateSignInButton(false);
+        renderSelectedName(null);
+        renderProfileDetails(null);
+        renderRoles([]);
+      } else {
+        toast('Failed to sign out', 'error');
+      }
+    });
+    
+    // Refresh button
+    $('#prosk-panel-refresh')?.addEventListener('click', () => fetchProfiles(true));
+    $('#prosk-refresh-roles')?.addEventListener('click', () => fetchProfiles(true));
+    $('#prosk-fetch-profiles')?.addEventListener('click', () => fetchProfiles(true));
+    
+    // Auto-fill button
+    $('#prosk-fill-btn')?.addEventListener('click', async () => {
+      logLine('Starting auto-fill...');
+      const res = await bgSend('START_FILL');
+      if (res?.ok) {
+        logLine('Fill request sent', 'ok');
+        toast('Autofill started', 'ok');
+      } else {
+        logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err');
+        toast(res?.error || 'Autofill failed', 'error');
+      }
+    });
+    
+    // Clear log
+    $('#prosk-clear-log')?.addEventListener('click', () => {
+      const logBox = $('#prosk-status-log');
+      if (logBox) logBox.innerHTML = '';
+    });
   }
 
   function dragStart(e) {
-    if (e.target.closest('.prosk-panel-close')) return;
-    
+    if (e.target.closest('.prosk-panel-actions')) return;
     initialX = e.clientX - xOffset;
     initialY = e.clientY - yOffset;
-
-    if (e.target === document.getElementById('prosk-panel-header') || 
-        e.target.closest('#prosk-panel-header')) {
-      isDragging = true;
-      panel.style.cursor = 'grabbing';
-    }
+    isDragging = true;
   }
 
   function drag(e) {
-    if (isDragging) {
-      e.preventDefault();
-      
-      currentX = e.clientX - initialX;
-      currentY = e.clientY - initialY;
-
-      xOffset = currentX;
-      yOffset = currentY;
-
-      setTranslate(currentX, currentY, panel);
-    }
+    if (!isDragging) return;
+    e.preventDefault();
+    currentX = e.clientX - initialX;
+    currentY = e.clientY - initialY;
+    xOffset = currentX;
+    yOffset = currentY;
+    setTranslate(currentX, currentY, panel);
   }
 
   function dragEnd() {
@@ -358,57 +382,178 @@
       initialX = currentX;
       initialY = currentY;
       isDragging = false;
-      panel.style.cursor = 'default';
-      
-      // Save position
-      chrome.storage.local.set({ panelX: xOffset, panelY: yOffset });
+      chrome.storage.local.set({ panelPosition: { x: xOffset, y: yOffset } });
     }
   }
 
   function setTranslate(xPos, yPos, el) {
-    el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+    if (el) el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
   }
 
-  function updateSelectedProfile() {
-    chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
-      if (response?.ok && response.state?.selectedProfile) {
-        const profile = response.state.selectedProfile;
-        const profileName = profile.profileName || 
-                          `${profile.firstName || ''} ${profile.lastName || ''}`.trim() ||
-                          'Unnamed Profile';
-        document.getElementById('prosk-selected-profile').textContent = profileName;
+  async function createPanel() {
+    if (document.getElementById(PANEL_ID)) return;
+
+    // Inject CSS
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = chrome.runtime.getURL('panel-styles.css');
+    document.head.appendChild(cssLink);
+
+    // Create panel HTML
+    const panelHTML = `
+      <div id="${PANEL_ID}" class="prosk-panel">
+        <div class="prosk-panel-header" id="prosk-panel-header">
+          <div class="prosk-panel-brand">
+            <div class="prosk-panel-logo">PA</div>
+            <div class="prosk-panel-title">
+              <span class="prosk-panel-name">ProSk Assist</span>
+              <span class="prosk-panel-subtitle">Floating Panel</span>
+            </div>
+          </div>
+          <div class="prosk-panel-actions">
+            <button class="prosk-panel-icon-btn" id="prosk-panel-refresh" title="Refresh Profiles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            </button>
+            <button class="prosk-panel-icon-btn" id="prosk-panel-signin" title="Sign In" style="display:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </button>
+            <button class="prosk-panel-icon-btn" id="prosk-panel-signout" title="Sign Out" style="display:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+            <button class="prosk-panel-icon-btn" id="prosk-panel-minimize" title="Minimize Panel">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="prosk-panel-close" id="prosk-panel-close" title="Close Panel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="prosk-panel-tabs">
+          <button class="prosk-panel-tab active" data-tab="apply">Apply</button>
+          <button class="prosk-panel-tab" data-tab="roles">Roles</button>
+          <button class="prosk-panel-tab" data-tab="profile">Profile</button>
+        </div>
+
+        <div class="prosk-panel-body">
+          <div class="prosk-panel-pane active" id="prosk-pane-apply">
+            <div class="prosk-panel-card">
+              <div class="prosk-panel-section">
+                <div class="prosk-panel-label">Selected Profile</div>
+                <div class="prosk-panel-value" id="prosk-selected-profile">—</div>
+              </div>
+              <button class="prosk-panel-btn prosk-btn-primary" id="prosk-fill-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <span>Auto-Fill this page</span>
+              </button>
+              <div class="prosk-panel-divider"></div>
+              <div class="prosk-panel-status">
+                <span class="prosk-status-dot prosk-status-ready"></span>
+                <span>Engine ready</span>
+              </div>
+            </div>
+            <div class="prosk-panel-card prosk-log-card">
+              <div class="prosk-card-head">
+                <div class="prosk-hstack"><span>Activity</span><span class="prosk-muted prosk-sm">live</span></div>
+                <button class="prosk-panel-icon-btn prosk-sm" id="prosk-clear-log" title="Clear log">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+              <div class="prosk-log" id="prosk-status-log"></div>
+            </div>
+          </div>
+
+          <div class="prosk-panel-pane" id="prosk-pane-roles">
+            <div class="prosk-panel-card">
+              <div class="prosk-panel-section">
+                <div class="prosk-panel-head-row">
+                  <div>
+                    <div class="prosk-panel-label">Profiles</div>
+                    <div class="prosk-sub">Pick a profile to use while applying</div>
+                  </div>
+                  <button class="prosk-panel-icon-btn" id="prosk-refresh-roles" title="Refresh">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                  </button>
+                </div>
+                <div id="prosk-roles-list" class="prosk-roles-list"></div>
+                <div class="prosk-panel-empty" id="prosk-roles-empty" style="display:none;">
+                  <p>No profiles found</p>
+                  <button class="prosk-panel-btn prosk-btn-primary" id="prosk-fetch-profiles">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Fetch from API</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prosk-panel-pane" id="prosk-pane-profile">
+            <div class="prosk-panel-card">
+              <div class="prosk-panel-section">
+                <div class="prosk-panel-label">Profile Details</div>
+                <div class="prosk-sub">Preview the active profile details</div>
+                <div id="prosk-profile-header" class="prosk-profile-header" style="display:none;">
+                  <div class="prosk-avatar">A</div>
+                  <div class="prosk-stack">
+                    <div id="prosk-ph-name" class="prosk-profile-name">—</div>
+                    <div id="prosk-ph-email" class="prosk-profile-email">—</div>
+                  </div>
+                  <a id="prosk-ph-resume" class="prosk-panel-btn prosk-btn-ghost prosk-sm" target="_blank" rel="noopener">Resume</a>
+                </div>
+                <div id="prosk-profile-details" class="prosk-profile-details"></div>
+                <div class="prosk-panel-empty" id="prosk-profile-empty">
+                  <p>No profile selected</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="prosk-signin-sheet" class="prosk-sheet prosk-hidden">
+        <div class="prosk-sheet-card">
+          <div class="prosk-sheet-head">
+            <h3>Sign in to ProSk Assist</h3>
+            <button class="prosk-panel-icon-btn" id="prosk-signin-close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <div class="prosk-sheet-body">
+            <label class="prosk-label">Email</label>
+            <input id="prosk-email" type="email" class="prosk-input" placeholder="you@example.com" />
+            <label class="prosk-label">Password</label>
+            <input id="prosk-password" type="password" class="prosk-input" placeholder="••••••••" />
+            <button id="prosk-btn-signin" class="prosk-panel-btn prosk-btn-primary prosk-w100">Continue</button>
+            <p class="prosk-sub prosk-muted">Your token is stored locally to fetch profiles.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Minimized Icon -->
+      <div id="prosk-minimized-icon" class="prosk-minimized-icon" style="display:none;">
+        <div class="prosk-minimized-logo">PA</div>
+        <div class="prosk-minimized-tooltip">Click to restore ProSk Assist</div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', panelHTML);
+    panel = document.getElementById(PANEL_ID);
+    
+    // Load saved position
+    chrome.storage.local.get(['panelPosition'], (result) => {
+      if (result.panelPosition) {
+        xOffset = result.panelPosition.x || 0;
+        yOffset = result.panelPosition.y || 0;
+        setTranslate(xOffset, yOffset, panel);
       }
     });
+    
+    setupEventListeners();
+    await loadPanelState();
+    logLine('ProSk Assist panel ready');
   }
 
-  function showNotification(message, type = 'info') {
-    // Create a simple notification
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#dc2626' : '#1a1a1a'};
-      color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      z-index: 1000000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      animation: proskFadeIn 0.3s ease;
-    `;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transition = 'opacity 0.3s ease';
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
-  }
-
-  // Listen for messages from background script
+  // Listen for messages from background/popup
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'OPEN_PANEL') {
       if (!document.getElementById(PANEL_ID)) {
@@ -416,13 +561,10 @@
       }
       sendResponse({ ok: true });
     } else if (msg.type === 'UPDATE_PANEL_PROFILE') {
-      updateSelectedProfile();
+      loadPanelState();
       sendResponse({ ok: true });
     }
     return true;
   });
-
-  // Auto-create panel on load (optional - can be triggered by button instead)
-  // createPanel();
 
 })();

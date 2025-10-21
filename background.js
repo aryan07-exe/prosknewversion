@@ -176,6 +176,34 @@ async function postFillToAllFrames(profile) {
   return results;
 }
 
+// ===== Action button click - open floating panel =====
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    // Send message to content script to open the floating panel
+    chrome.tabs.sendMessage(tab.id, { type: 'OPEN_PANEL' }, (response) => {
+      if (chrome.runtime.lastError) {
+        log("Error opening floating panel:", chrome.runtime.lastError.message);
+        // If content script not ready, try injecting it first
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['panel.js']
+        }).then(() => {
+          // Try again after injection
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tab.id, { type: 'OPEN_PANEL' });
+          }, 100);
+        }).catch(err => {
+          log("Failed to inject panel script:", err);
+        });
+      } else {
+        log("Floating panel opened for tab:", tab.id);
+      }
+    });
+  } catch (error) {
+    log("Error opening floating panel:", error);
+  }
+});
+
 // ===== Message router =====
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
@@ -214,6 +242,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         if (!profile) throw new Error("No selected profile in storage");
         const results = await postFillToAllFrames(profile);
         sendResponse({ ok: true, results });
+        return;
+      }
+
+      if (msg?.type === "SIGNOUT") {
+        await chrome.storage.local.clear();
+        log("User signed out - storage cleared");
+        sendResponse({ ok: true });
         return;
       }
 
