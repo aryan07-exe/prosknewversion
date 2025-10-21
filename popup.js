@@ -32,16 +32,40 @@ function toast(msg, kind='ok', timeout=2400) {
   const el = document.createElement('div');
   el.className = `toast ${kind}`;
   
-  // Add icon based on message kind
-  let icon = 'ℹ️';
-  if (kind === 'ok') icon = '✓';
-  if (kind === 'error') icon = '✕';
-  if (kind === 'warn') icon = '⚠️';
+  // Add SVG icon based on message kind
+  let iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>`;
+  
+  if (kind === 'ok') {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>`;
+  }
+  
+  if (kind === 'error') {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>`;
+  }
+  
+  if (kind === 'warn') {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>`;
+  }
   
   el.innerHTML = `
-    <span class="toast-icon">${icon}</span>
+    <span class="toast-icon">${iconSvg}</span>
     <span class="toast-message">${msg}</span>
-    <button class="icon-btn sm">
+    <button class="icon-btn sm toast-close">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -49,7 +73,7 @@ function toast(msg, kind='ok', timeout=2400) {
     </button>
   `;
   
-  el.querySelector('button').onclick = () => el.remove();
+  el.querySelector('.toast-close').onclick = () => el.remove();
   
   // Create toasts container if it doesn't exist
   let toastsContainer = $('.toasts');
@@ -181,7 +205,17 @@ const phResume = $('#phResume');
 
 // Sign in sheet
 const sheet = $('#signinSheet');
-$('#signinOpenBtn').addEventListener('click', ()=>sheet.classList.remove('hidden'));
+const signinBtn = $('#signinOpenBtn');
+
+function updateSignInButton(isSignedIn) {
+  if (isSignedIn) {
+    signinBtn.style.display = 'none';
+  } else {
+    signinBtn.style.display = 'flex';
+  }
+}
+
+signinBtn.addEventListener('click', ()=>sheet.classList.remove('hidden'));
 $('#signinCloseBtn').addEventListener('click', ()=>sheet.classList.add('hidden'));
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') sheet.classList.add('hidden'); });
 $('#btnSignin').addEventListener('click', doSignin);
@@ -190,7 +224,7 @@ $('#password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSignin()
 async function doSignin(){
   const email = $('#email').value.trim();
   const pwd   = $('#password').value.trim();
-  if (!email || !pwd){ toast('Enter email & password','err'); return; }
+  if (!email || !pwd){ toast('Enter email & password','error'); return; }
   try{
     const data = await apiSignin(email, pwd);
     const token = data?.token; const userId = data?.user?.id;
@@ -198,13 +232,15 @@ async function doSignin(){
     const saved = await bgSend('SIGNIN_SAVE',{ token, userId });
     if (!saved?.ok) throw new Error(saved?.error || 'Could not save signin');
     sheet.classList.add('hidden');
-    toast('Signed in');
+    toast('Successfully signed in to ProSk Assist', 'ok');
+    updateSignInButton(true);
+    envBadge.textContent = 'Signed in';
     await fetchProfiles(true);
     const st = await bgSend('GET_STATE');
     renderSelectedName(st?.state?.selectedProfile || null);
     renderProfileDetails(st?.state?.selectedProfile || null);
   }catch(e){
-    toast('Signin error: '+e.message,'err');
+    toast('Sign in failed: '+e.message,'error');
   }
 }
 
@@ -350,8 +386,33 @@ $('#searchInput').addEventListener('input', ()=>{
 $('#autofillBtn').addEventListener('click', async ()=>{
   logLine('Starting auto-fill…');
   const res = await bgSend('START_FILL');
-  if (res?.ok){ logLine('Fill request sent to all frames.'); toast('Autofill started'); }
-  else { logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err'); toast(res?.error || 'Autofill failed', 'err'); }
+  if (res?.ok){ logLine('Fill request sent to all frames.'); toast('Autofill started', 'ok'); }
+  else { logLine(`Fill failed: ${res?.error || 'unknown error'}`, 'err'); toast(res?.error || 'Autofill failed', 'error'); }
+});
+
+// Open Panel button
+$('#openPanelBtn')?.addEventListener('click', async ()=>{
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      toast('No active tab found', 'error');
+      return;
+    }
+    
+    // Send message to content script to open panel
+    chrome.tabs.sendMessage(tab.id, { type: 'OPEN_PANEL' }, (response) => {
+      if (chrome.runtime.lastError) {
+        toast('Failed to open panel. Please refresh the page.', 'error');
+        logLine('Panel open error: ' + chrome.runtime.lastError.message, 'err');
+      } else if (response?.ok) {
+        toast('Panel opened on page', 'ok');
+        logLine('Panel opened successfully');
+      }
+    });
+  } catch (error) {
+    console.error('Error opening panel:', error);
+    toast('Failed to open panel', 'error');
+  }
 });
 
 $('#refreshBtn').addEventListener('click', fetchProfiles);
@@ -413,18 +474,22 @@ async function fetchProfiles(showBusy=false){
   const st = await bgSend('GET_STATE');
   const state = st?.state || {};
 
+  // Check if user is signed in
+  const isSignedIn = !!(state.token && state.userId);
+  updateSignInButton(isSignedIn);
+
   renderSelectedName(state.selectedProfile || null);
   renderProfileDetails(state.selectedProfile || null);
 
   if (Array.isArray(state.profilesCache) && state.profilesCache.length){
     renderRoles(state.profilesCache);
-    envBadge.textContent = `Cached ${state.profilesCache.length}`;
+    envBadge.textContent = `${state.profilesCache.length} Profile${state.profilesCache.length !== 1 ? 's' : ''}`;
   } else {
     rolesEmpty.hidden = false;
-    envBadge.textContent = state.token && state.userId ? 'Signed in' : 'Sign in';
+    envBadge.textContent = isSignedIn ? 'Signed in' : 'Not signed in';
   }
 
-  logLine('Popup ready.');
+  logLine('ProSk Assist ready.');
 })();
 
 
